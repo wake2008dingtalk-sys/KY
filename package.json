@@ -1,0 +1,18 @@
+{
+  "name": "worktime-tracker",
+  "version": "1.0.0",
+  "description": "工时定位签到系统",
+  "scripts": {
+    "build": "echo 'Static HTML, no build needed'",
+    "sync": "npx cap sync"
+  },
+  "dependencies": {
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/local-notifications": "^6.0.0",
+    "@capacitor-community/background-geolocation": "^1.2.26"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.0.0"
+  }
+}
