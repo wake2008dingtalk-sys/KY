@@ -1,0 +1,109 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Install dependencies
+        run: |
+          npm install
+          npm install @capacitor/cli @capacitor/core @capacitor/android
+
+      - name: Prepare web assets
+        run: |
+          mkdir -p www
+          cp index.html manifest.json sw.js www/
+          cp icon-192.png icon-512.png www/
+          if [ -d app-icon ]; then cp -r app-icon www/; fi
+
+      - name: Add Android platform
+        run: npx cap add android
+
+      - name: Sync web assets
+        run: npx cap sync android
+
+      - name: Generate and replace Android app icons
+        run: |
+          pip install Pillow
+          python3 - <<'PYEOF'
+          from PIL import Image
+          import os, shutil
+          # 健壮地查找图标源
+          icon_paths = [
+              'app-icon/icon-512.png',
+              'icon-512.png',
+              'www/app-icon/icon-512.png',
+              'www/icon-512.png',
+          ]
+          src = None
+          for p in icon_paths:
+              if os.path.exists(p):
+                  src = Image.open(p)
+                  print('Found icon source at:', p)
+                  break
+          if src is None:
+              print('ERROR: No icon-512.png found at any expected path. Creating fallback.')
+              src = Image.new('RGBA', (512, 512), (0, 200, 200, 255))
+          sizes = {'mdpi':48, 'hdpi':72, 'xhdpi':96, 'xxhdpi':144, 'xxxhdpi':192}
+          for name, size in sizes.items():
+            d = f'android/app/src/main/res/mipmap-{name}'
+            os.makedirs(d, exist_ok=True)
+            img = src.resize((size, size), Image.LANCZOS)
+            img.save(f'{d}/ic_launcher.png')
+            img.save(f'{d}/ic_launcher_round.png')
+            print(f'Generated {d}/ic_launcher.png ({size}x{size})')
+          # 同时替换 anydpi-v26 的 adaptive icon 前景
+          anydpi = 'android/app/src/main/res/mipmap-anydpi-v26'
+          if os.path.exists(anydpi):
+            img = src.resize((108, 108), Image.LANCZOS)
+            img.save(f'{anydpi}/ic_launcher_foreground.png')
+            print(f'Replaced {anydpi}/ic_launcher_foreground.png')
+          PYEOF
+
+      - name: Add background location permission
+        run: |
+          python3 - <<'PYEOF'
+          import re
+          p = 'android/app/src/main/AndroidManifest.xml'
+          with open(p) as f:
+              m = f.read()
+          if 'ACCESS_BACKGROUND_LOCATION' not in m:
+              perm = '    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />\n'
+              m = re.sub(r'(</manifest>)', perm + r'\1', m, count=1)
+              with open(p, 'w') as f:
+                  f.write(m)
+              print('Added ACCESS_BACKGROUND_LOCATION')
+          else:
+              print('Already present')
+          PYEOF
+
+      - name: Build debug APK
+        run: |
+          cd android
+          ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: worktime-tracker-debug
+          path: android/app/build/outputs/apk/debug/*.apk
+          retention-days: 7
