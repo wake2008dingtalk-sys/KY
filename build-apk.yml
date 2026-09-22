@@ -1,0 +1,162 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # 允许创建 GitHub Release
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Install dependencies
+        run: |
+          npm install
+          npm install @capacitor/cli @capacitor/core @capacitor/android
+          npm install @capacitor/local-notifications
+
+      - name: Prepare web assets
+        run: |
+          mkdir -p www
+          cp index.html manifest.json sw.js www/
+          cp icon-192.png icon-512.png www/
+          if [ -d app-icon ]; then cp -r app-icon www/; fi
+
+      - name: Add Android platform
+        run: npx cap add android
+
+      - name: Sync web assets
+        run: npx cap sync android
+
+      - name: Generate and replace Android app icons
+        run: |
+          pip install Pillow
+          python3 - <<'PYEOF'
+          from PIL import Image
+          import os, shutil
+          # 健壮地查找图标源
+          icon_paths = [
+              'app-icon/icon-512.png',
+              'icon-512.png',
+              'www/app-icon/icon-512.png',
+              'www/icon-512.png',
+          ]
+          src = None
+          for p in icon_paths:
+              if os.path.exists(p):
+                  src = Image.open(p)
+                  print('Found icon source at:', p)
+                  break
+          if src is None:
+              print('ERROR: No icon-512.png found at any expected path. Creating fallback.')
+              src = Image.new('RGBA', (512, 512), (0, 200, 200, 255))
+          
+          sizes = {'mdpi':48, 'hdpi':72, 'xhdpi':96, 'xxhdpi':144, 'xxxhdpi':192}
+          for name, size in sizes.items():
+            d = f'android/app/src/main/res/mipmap-{name}'
+            os.makedirs(d, exist_ok=True)
+            img = src.resize((size, size), Image.LANCZOS)
+            img.save(f'{d}/ic_launcher.png')
+            img.save(f'{d}/ic_launcher_round.png')
+            print(f'Generated {d}/ic_launcher.png ({size}x{size})')
+          
+          # Android 8.0+ adaptive icon: 删除 XML 定义，强制系统回退使用 PNG 图标
+          anydpi = 'android/app/src/main/res/mipmap-anydpi-v26'
+          if os.path.exists(anydpi):
+            xml_file = f'{anydpi}/ic_launcher.xml'
+            if os.path.exists(xml_file):
+                os.remove(xml_file)
+                print(f'Removed {xml_file} (forces PNG icon on Android 8.0+)')
+            # 可选：替换 foreground 为统一图标，防止残留 foreground 影响
+            img = src.resize((108, 108), Image.LANCZOS)
+            img.save(f'{anydpi}/ic_launcher_foreground.png')
+            print(f'Replaced {anydpi}/ic_launcher_foreground.png')
+          PYEOF
+
+      - name: Add Android permissions
+        run: |
+          python3 - <<'PYEOF'
+          import re
+          p = 'android/app/src/main/AndroidManifest.xml'
+          with open(p) as f:
+              m = f.read()
+          
+          # 添加后台定位权限
+          if 'ACCESS_BACKGROUND_LOCATION' not in m:
+              perm = '    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />\n'
+              m = re.sub(r'(</manifest>)', perm + r'\1', m, count=1)
+              print('Added ACCESS_BACKGROUND_LOCATION')
+          else:
+              print('ACCESS_BACKGROUND_LOCATION already present')
+          
+          # 添加通知权限（Android 13+ 需要 POST_NOTIFICATIONS）
+          if 'POST_NOTIFICATIONS' not in m:
+              perm2 = '    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n'
+              m = re.sub(r'(</manifest>)', perm2 + r'\1', m, count=1)
+              print('Added POST_NOTIFICATIONS')
+          else:
+              print('POST_NOTIFICATIONS already present')
+          
+          with open(p, 'w') as f:
+              f.write(m)
+          PYEOF
+
+      - name: Build debug APK
+        run: |
+          cd android
+          ./gradlew assembleDebug
+
+      - name: Package APK for release
+        run: |
+          mkdir -p release
+          cp android/app/build/outputs/apk/debug/*.apk release/worktime-tracker.apk
+          ls -la release/
+
+      - name: Upload APK as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: worktime-tracker-debug
+          path: android/app/build/outputs/apk/debug/*.apk
+          retention-days: 7
+
+      - name: Create GitHub Release with APK
+        if: github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: "工时打卡 v${{ github.run_number }}"
+          body: |
+            🎯 工时定位签到系统 - 自动构建版本
+            
+            📱 **下载 APK**
+            下方 Assets 中点击 `worktime-tracker.apk` 即可下载安装
+            
+            ⚠️ **安装前请确保：**
+            - 开启「允许安装未知来源应用」
+            - 首次打开授予定位权限和通知权限
+            
+            🔧 **功能亮点：**
+            - 自动签到/签退（基于 GPS 围栏）
+            - 后台持续定位
+            - 工时统计与收入计算
+            - 打卡通知提醒
+          files: release/worktime-tracker.apk
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
