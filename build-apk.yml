@@ -1,0 +1,974 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # 允许创建 GitHub Release
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Install dependencies
+        run: |
+          npm install
+          npm install @capacitor/cli @capacitor/core @capacitor/android
+          npm install @capacitor/local-notifications
+
+      - name: Prepare web assets
+        run: |
+          mkdir -p www
+          cp index.html manifest.json sw.js www/
+          cp icon-192.png icon-512.png www/
+          if [ -d app-icon ]; then cp -r app-icon www/; fi
+
+      - name: Add Android platform
+        run: npx cap add android
+
+      - name: Sync web assets
+        run: npx cap sync android
+
+      - name: Generate and replace Android app icons
+        run: |
+          pip install Pillow
+          python3 - <<'PYEOF'
+          from PIL import Image
+          import os, shutil
+          # 健壮地查找图标源
+          icon_paths = [
+              'app-icon/icon-512.png',
+              'icon-512.png',
+              'www/app-icon/icon-512.png',
+              'www/icon-512.png',
+          ]
+          src = None
+          for p in icon_paths:
+              if os.path.exists(p):
+                  src = Image.open(p)
+                  print('Found icon source at:', p)
+                  break
+          if src is None:
+              print('ERROR: No icon-512.png found at any expected path. Creating fallback.')
+              src = Image.new('RGBA', (512, 512), (0, 200, 200, 255))
+          
+          sizes = {'mdpi':48, 'hdpi':72, 'xhdpi':96, 'xxhdpi':144, 'xxxhdpi':192}
+          for name, size in sizes.items():
+            d = f'android/app/src/main/res/mipmap-{name}'
+            os.makedirs(d, exist_ok=True)
+            img = src.resize((size, size), Image.LANCZOS)
+            img.save(f'{d}/ic_launcher.png')
+            img.save(f'{d}/ic_launcher_round.png')
+            print(f'Generated {d}/ic_launcher.png ({size}x{size})')
+          
+          # Android 8.0+ adaptive icon: 删除 XML 定义，强制系统回退使用 PNG 图标
+          anydpi = 'android/app/src/main/res/mipmap-anydpi-v26'
+          if os.path.exists(anydpi):
+            xml_file = f'{anydpi}/ic_launcher.xml'
+            if os.path.exists(xml_file):
+                os.remove(xml_file)
+                print(f'Removed {xml_file} (forces PNG icon on Android 8.0+)')
+            # 可选：替换 foreground 为统一图标，防止残留 foreground 影响
+            img = src.resize((108, 108), Image.LANCZOS)
+            img.save(f'{anydpi}/ic_launcher_foreground.png')
+            print(f'Replaced {anydpi}/ic_launcher_foreground.png')
+          PYEOF
+
+      - name: Inject native background services
+        run: |
+          python3 - <<'PYEOF'
+          import os, textwrap
+
+          pkg = 'com/worktime/tracker'
+          src = f'android/app/src/main/java/{pkg}'
+          os.makedirs(src, exist_ok=True)
+
+          # === 1. NotificationHelper.java ===
+          nh = os.path.join(src, 'NotificationHelper.java')
+          with open(nh, 'w', encoding='utf-8') as f:
+              f.write(textwrap.dedent('''\
+                  package com.worktime.tracker;
+                  import android.app.Notification;
+                  import android.app.NotificationChannel;
+                  import android.app.NotificationManager;
+                  import android.content.Context;
+                  import android.os.Build;
+                  import androidx.core.app.NotificationCompat;
+                  public class NotificationHelper {
+                      private static final String CHANNEL_ID = "worktime_channel";
+                      private static final String CHANNEL_NAME = "工时打卡后台服务";
+                      public static void createChannel(Context ctx) {
+                          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                              NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
+                              if (nm != null && nm.getNotificationChannel(CHANNEL_ID) == null) {
+                                  NotificationChannel ch = new NotificationChannel(CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_LOW);
+                                  ch.setDescription("持续定位与围栏检测，确保自动签到签退");
+                                  ch.setShowBadge(false);
+                                  nm.createNotificationChannel(ch);
+                              }
+                          }
+                      }
+                      public static Notification buildForeground(Context ctx, String title, String body) {
+                          createChannel(ctx);
+                          return new NotificationCompat.Builder(ctx, CHANNEL_ID)
+                              .setContentTitle(title)
+                              .setContentText(body)
+                              .setSmallIcon(android.R.drawable.ic_menu_mylocation)
+                              .setOngoing(true)
+                              .setPriority(NotificationCompat.PRIORITY_LOW)
+                              .build();
+                      }
+                  }
+              '''))
+          print('Wrote NotificationHelper.java')
+
+          # === 2. LocationHelper.java ===
+          lh = os.path.join(src, 'LocationHelper.java')
+          with open(lh, 'w', encoding='utf-8') as f:
+              f.write(textwrap.dedent('''\
+                  package com.worktime.tracker;
+                  import android.Manifest;
+                  import android.content.Context;
+                  import android.content.pm.PackageManager;
+                  import android.location.Location;
+                  import android.location.LocationListener;
+                  import android.location.LocationManager;
+                  import android.os.Bundle;
+                  import android.os.Handler;
+                  import android.os.Looper;
+                  import android.util.Log;
+                  import androidx.core.content.ContextCompat;
+                  public class LocationHelper {
+                      private static final String TAG = "WorkTimeLoc";
+                      private LocationManager lm;
+                      private LocationListener listener;
+                      private Handler handler = new Handler(Looper.getMainLooper());
+                      private Runnable timeoutRunnable;
+                      private OnLocationCallback callback;
+                      public interface OnLocationCallback {
+                          void onLocation(double lat, double lng, float accuracy);
+                          void onError(String msg);
+                      }
+                      public LocationHelper(Context ctx) {
+                          lm = (LocationManager) ctx.getSystemService(Context.LOCATION_SERVICE);
+                      }
+                      public void requestOnce(Context ctx, OnLocationCallback cb) {
+                          this.callback = cb;
+                          if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                              if (cb != null) cb.onError("No location permission");
+                              return;
+                          }
+                          // 优先用 GPS，fallback 到网络
+                          String provider = LocationManager.GPS_PROVIDER;
+                          if (!lm.isProviderEnabled(provider)) {
+                              provider = LocationManager.NETWORK_PROVIDER;
+                          }
+                          if (!lm.isProviderEnabled(provider)) {
+                              if (cb != null) cb.onError("No location provider available");
+                              return;
+                          }
+                          listener = new LocationListener() {
+                              @Override public void onLocationChanged(Location loc) {
+                                  if (callback != null) callback.onLocation(loc.getLatitude(), loc.getLongitude(), loc.getAccuracy());
+                                  stop();
+                              }
+                              @Override public void onProviderEnabled(String p) {}
+                              @Override public void onProviderDisabled(String p) {}
+                              @Override public void onStatusChanged(String p, int s, Bundle e) {}
+                          };
+                          try {
+                              lm.requestLocationUpdates(provider, 0, 0, listener, Looper.getMainLooper());
+                          } catch (Exception e) {
+                              Log.e(TAG, "requestLocationUpdates failed", e);
+                              if (cb != null) cb.onError(e.getMessage());
+                              return;
+                          }
+                          // 15秒超时
+                          timeoutRunnable = () -> {
+                              stop();
+                              if (cb != null) cb.onError("Location timeout");
+                          };
+                          handler.postDelayed(timeoutRunnable, 15000);
+                      }
+                      public void stop() {
+                          if (timeoutRunnable != null) handler.removeCallbacks(timeoutRunnable);
+                          if (listener != null) {
+                              try { lm.removeUpdates(listener); } catch (Exception e) { Log.w(TAG, "removeUpdates", e); }
+                              listener = null;
+                          }
+                      }
+                  }
+              '''))
+          print('Wrote LocationHelper.java')
+
+          # === 3. GeofenceHelper.java ===
+          gh = os.path.join(src, 'GeofenceHelper.java')
+          with open(gh, 'w', encoding='utf-8') as f:
+              f.write(textwrap.dedent('''\
+                  package com.worktime.tracker;
+                  import android.content.Context;
+                  import android.content.SharedPreferences;
+                  import android.util.Log;
+                  public class GeofenceHelper {
+                      private static final String TAG = "WorkTimeFence";
+                      private static final String PREFS = "worktime_prefs";
+                      private static final double EARTH_RADIUS = 6371000; // meters
+                      public static boolean isInsideFence(Context ctx, double lat, double lng) {
+                          SharedPreferences sp = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+                          double wLat = sp.getFloat("work_lat", 0f);
+                          double wLng = sp.getFloat("work_lng", 0f);
+                          int radius = sp.getInt("fence_radius", 200);
+                          if (wLat == 0 && wLng == 0) return false;
+                          double d = haversine(lat, lng, wLat, wLng);
+                          Log.d(TAG, "Distance to work: " + d + "m, radius=" + radius + "m, inside=" + (d <= radius));
+                          return d <= radius;
+                      }
+                      private static double haversine(double lat1, double lng1, double lat2, double lng2) {
+                          double dLat = Math.toRadians(lat2 - lat1);
+                          double dLng = Math.toRadians(lng2 - lng1);
+                          double a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                                     Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
+                                     Math.sin(dLng/2) * Math.sin(dLng/2);
+                          return EARTH_RADIUS * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                      }
+                  }
+              '''))
+          print('Wrote GeofenceHelper.java')
+
+          # === 4. WorkTimeService.java (ForegroundService) ===
+          ws = os.path.join(src, 'WorkTimeService.java')
+          with open(ws, 'w', encoding='utf-8') as f:
+              f.write(textwrap.dedent('''\
+                  package com.worktime.tracker;
+                  import android.app.AlarmManager;
+                  import android.app.PendingIntent;
+                  import android.app.Service;
+                  import android.content.Context;
+                  import android.content.Intent;
+                  import android.content.SharedPreferences;
+                  import android.os.Build;
+                  import android.os.Handler;
+                  import android.os.IBinder;
+                  import android.os.Looper;
+                  import android.os.SystemClock;
+                  import android.util.Log;
+                  public class WorkTimeService extends Service {
+                      private static final String TAG = "WorkTimeSvc";
+                      private static final int NOTIF_ID = 1001;
+                      private Handler handler;
+                      private Runnable pollRunnable;
+                      private LocationHelper locHelper;
+                      private int pollIntervalMs = 30000; // default 30s
+                      @Override public void onCreate() {
+                          super.onCreate();
+                          handler = new Handler(Looper.getMainLooper());
+                          locHelper = new LocationHelper(this);
+                          Log.i(TAG, "Service created");
+                      }
+                      @Override public int onStartCommand(Intent intent, int flags, int startId) {
+                          Log.i(TAG, "onStartCommand");
+                          // 读取轮询间隔
+                          SharedPreferences sp = getSharedPreferences("worktime_prefs", MODE_PRIVATE);
+                          pollIntervalMs = sp.getInt("poll_interval_ms", 30000);
+                          // 启动前台通知
+                          startForeground(NOTIF_ID, NotificationHelper.buildForeground(this, "工时打卡后台运行中", "定位监控与自动签到服务"));
+                          // 开始轮询
+                          startPolling();
+                          // 设置 AlarmManager 兜底（每分钟唤醒一次检查围栏）
+                          scheduleAlarm();
+                          return START_STICKY; // 被杀后系统自动重启
+                      }
+                      private void startPolling() {
+                          if (pollRunnable != null) handler.removeCallbacks(pollRunnable);
+                          pollRunnable = new Runnable() {
+                              @Override public void run() {
+                                  doCheck();
+                                  handler.postDelayed(this, pollIntervalMs);
+                              }
+                          };
+                          handler.post(pollRunnable);
+                          Log.i(TAG, "Polling started, interval=" + pollIntervalMs + "ms");
+                      }
+                      private void doCheck() {
+                          Log.i(TAG, "doCheck - requesting location");
+                          locHelper.requestOnce(WorkTimeService.this, new LocationHelper.OnLocationCallback() {
+                              @Override public void onLocation(double lat, double lng, float acc) {
+                                  Log.i(TAG, "Location: " + lat + "," + lng + " acc=" + acc);
+                                  boolean inside = GeofenceHelper.isInsideFence(WorkTimeService.this, lat, lng);
+                                  SharedPreferences sp = getSharedPreferences("worktime_prefs", MODE_PRIVATE);
+                                  boolean onDuty = sp.getBoolean("on_duty", false);
+                                  long startMs = sp.getLong("start_ms", 0);
+                                  long endMs = sp.getLong("end_ms", 0);
+                                  long nowMs = System.currentTimeMillis();
+                                  boolean autoCheckIn = sp.getBoolean("auto_checkin", true);
+                                  String lastSign = sp.getString("last_sign", "");
+                                  // 下班时间到 → 强制签退
+                                  if (onDuty && nowMs >= endMs && !"out".equals(lastSign)) {
+                                      sign("out", endMs);
+                                      NotificationHelper.buildForeground(WorkTimeService.this, "工时打卡", "已到达下班时间，自动签退");
+                                      return;
+                                  }
+                                  // 上班签到：在围栏内 + 已到上班时间
+                                  if (autoCheckIn && inside && !onDuty && !"in".equals(lastSign) && nowMs >= startMs) {
+                                      sign("in", startMs);
+                                      NotificationHelper.buildForeground(WorkTimeService.this, "工时打卡", "已到达工作地点，自动签到上班");
+                                  }
+                              }
+                              @Override public void onError(String msg) {
+                                  Log.w(TAG, "Location error: " + msg);
+                              }
+                          });
+                      }
+                      private void sign(String type, long timeMs) {
+                          SharedPreferences sp = getSharedPreferences("worktime_prefs", MODE_PRIVATE);
+                          SharedPreferences.Editor ed = sp.edit();
+                          if ("in".equals(type)) {
+                              ed.putBoolean("on_duty", true);
+                              ed.putString("last_sign", "in");
+                          } else {
+                              ed.putBoolean("on_duty", false);
+                              ed.putString("last_sign", "out");
+                          }
+                          ed.apply();
+                          Log.i(TAG, "Signed " + type + " at " + timeMs);
+                          // 发广播通知 WebView 层刷新
+                          Intent intent = new Intent("com.worktime.tracker.SIGN_EVENT");
+                          intent.putExtra("type", type);
+                          intent.putExtra("time", timeMs);
+                          sendBroadcast(intent);
+                      }
+                      private void scheduleAlarm() {
+                          AlarmManager am = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+                          Intent intent = new Intent(this, AlarmReceiver.class);
+                          PendingIntent pi;
+                          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                              pi = PendingIntent.getBroadcast(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+                          } else {
+                              pi = PendingIntent.getBroadcast(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+                          }
+                          long interval = 60000; // 1 minute
+                          long triggerAt = SystemClock.elapsedRealtime() + interval;
+                          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                              am.setExactAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, triggerAt, pi);
+                          } else {
+                              am.setRepeating(AlarmManager.ELAPSED_REALTIME_WAKEUP, triggerAt, interval, pi);
+                          }
+                          Log.i(TAG, "Alarm scheduled");
+                      }
+                      @Override public IBinder onBind(Intent intent) { return null; }
+                      @Override public void onDestroy() {
+                          super.onDestroy();
+                          if (pollRunnable != null) handler.removeCallbacks(pollRunnable);
+                          locHelper.stop();
+                          Log.i(TAG, "Service destroyed, restarting...");
+                          // 服务被杀时尝试重启
+                          Intent restart = new Intent(this, WorkTimeService.class);
+                          startService(restart);
+                      }
+                  }
+              '''))
+          print('Wrote WorkTimeService.java')
+
+          # === 5. FloatWindowService.java (悬浮窗后台组件) ===
+          fw = os.path.join(src, 'FloatWindowService.java')
+          with open(fw, 'w', encoding='utf-8') as f:
+              f.write(textwrap.dedent('''\
+                  package com.worktime.tracker;
+                  import android.app.Service;
+                  import android.content.Intent;
+                  import android.content.SharedPreferences;
+                  import android.graphics.PixelFormat;
+                  import android.os.Build;
+                  import android.os.IBinder;
+                  import android.provider.Settings;
+                  import android.util.Log;
+                  import android.view.Gravity;
+                  import android.view.LayoutInflater;
+                  import android.view.MotionEvent;
+                  import android.view.View;
+                  import android.view.WindowManager;
+                  import android.widget.TextView;
+                  import android.widget.ImageButton;
+                  import android.widget.LinearLayout;
+                  import android.widget.Toast;
+                  import org.json.JSONObject;
+                  public class FloatWindowService extends Service {
+                      private static final String TAG = "WorkTimeFloat";
+                      private WindowManager wm;
+                      private View floatView;
+                      private WindowManager.LayoutParams params;
+                      private TextView tvStatus;
+                      private TextView tvLocation;
+                      private boolean isShown = false;
+                      private LocationHelper locHelper;
+                      @Override public void onCreate() {
+                          super.onCreate();
+                          wm = (WindowManager) getSystemService(WINDOW_SERVICE);
+                          locHelper = new LocationHelper(this);
+                          createFloatView();
+                      }
+                      @Override public int onStartCommand(Intent intent, int flags, int startId) {
+                          Log.i(TAG, "FloatWindow onStartCommand");
+                          if (intent != null) {
+                              String action = intent.getStringExtra("action");
+                              if ("show".equals(action)) {
+                                  show();
+                              } else if ("hide".equals(action)) {
+                                  hide();
+                              } else if ("update".equals(action)) {
+                                  String status = intent.getStringExtra("status");
+                                  String location = intent.getStringExtra("location");
+                                  updateUI(status, location);
+                              }
+                          }
+                          return START_STICKY;
+                      }
+                      @Override public IBinder onBind(Intent intent) { return null; }
+                      @Override public void onDestroy() {
+                          super.onDestroy();
+                          hide();
+                          if (locHelper != null) locHelper.stop();
+                      }
+                      private void createFloatView() {
+                          LayoutInflater inflater = LayoutInflater.from(this);
+                          floatView = inflater.inflate(R.layout.float_window_layout, null);
+                          tvStatus = floatView.findViewById(R.id.float_status);
+                          tvLocation = floatView.findViewById(R.id.float_location);
+                          ImageButton btnManualSign = floatView.findViewById(R.id.btn_manual_sign);
+                          ImageButton btnAutoSign = floatView.findViewById(R.id.btn_auto_sign);
+                          ImageButton btnClose = floatView.findViewById(R.id.btn_close);
+                          // 手动签到
+                          btnManualSign.setOnClickListener(v -> {
+                              Toast.makeText(this, "手动签到", Toast.LENGTH_SHORT).show();
+                              sendBroadcastToWeb("manual_sign");
+                          });
+                          // 自动签到
+                          btnAutoSign.setOnClickListener(v -> {
+                              Toast.makeText(this, "自动签到", Toast.LENGTH_SHORT).show();
+                              sendBroadcastToWeb("auto_sign");
+                          });
+                          // 关闭悬浮窗
+                          btnClose.setOnClickListener(v -> {
+                              hide();
+                              Toast.makeText(this, "悬浮窗已隐藏", Toast.LENGTH_SHORT).show();
+                          });
+                          // 拖动悬浮窗
+                          floatView.setOnTouchListener(new View.OnTouchListener() {
+                              private float lastX, lastY;
+                              private int initialX, initialY;
+                              @Override
+                              public boolean onTouch(View v, MotionEvent event) {
+                                  switch (event.getAction()) {
+                                      case MotionEvent.ACTION_DOWN:
+                                          lastX = event.getRawX();
+                                          lastY = event.getRawY();
+                                          initialX = params.x;
+                                          initialY = params.y;
+                                          return false;
+                                      case MotionEvent.ACTION_MOVE:
+                                          float dx = event.getRawX() - lastX;
+                                          float dy = event.getRawY() - lastY;
+                                          params.x = initialX + (int) dx;
+                                          params.y = initialY + (int) dy;
+                                          wm.updateViewLayout(floatView, params);
+                                          return true;
+                                  }
+                                  return false;
+                              }
+                          });
+                      }
+                      private void requestLocationAndMark() {
+                          locHelper.requestOnce(this, new LocationHelper.OnLocationCallback() {
+                              @Override public void onLocation(double lat, double lng, float accuracy) {
+                                  SharedPreferences sp = getSharedPreferences("worktime_prefs", MODE_PRIVATE);
+                                  sp.edit().putFloat("work_lat", (float) lat).putFloat("work_lng", (float) lng).apply();
+                                  updateUI("已重新标记", String.format("%.6f, %.6f", lat, lng));
+                                  sendBroadcastToWeb("relocate");
+                                  Toast.makeText(FloatWindowService.this, "位置已更新", Toast.LENGTH_SHORT).show();
+                              }
+                              @Override public void onError(String msg) {
+                                  Toast.makeText(FloatWindowService.this, "定位失败: " + msg, Toast.LENGTH_SHORT).show();
+                              }
+                          });
+                      }
+                      public void show() {
+                          if (isShown || floatView == null) return;
+                          int type = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+                                  ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+                                  : WindowManager.LayoutParams.TYPE_PHONE;
+                          params = new WindowManager.LayoutParams(
+                                  WindowManager.LayoutParams.WRAP_CONTENT,
+                                  WindowManager.LayoutParams.WRAP_CONTENT,
+                                  type,
+                                  WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE |
+                                          WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL |
+                                          WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
+                                  PixelFormat.TRANSLUCENT);
+                          params.gravity = Gravity.TOP | Gravity.START;
+                          params.x = 0;
+                          params.y = 200;
+                          try {
+                              wm.addView(floatView, params);
+                              isShown = true;
+                              updateStatusFromPrefs();
+                          } catch (Exception e) {
+                              Log.e(TAG, "show float window failed", e);
+                          }
+                      }
+                      public void hide() {
+                          if (!isShown || floatView == null) return;
+                          try {
+                              wm.removeView(floatView);
+                          } catch (Exception e) {
+                              Log.w(TAG, "hide float window", e);
+                          }
+                          isShown = false;
+                      }
+                      private void updateUI(String status, String location) {
+                          if (tvStatus != null) tvStatus.setText(status);
+                          if (tvLocation != null) tvLocation.setText(location);
+                      }
+                      private void updateStatusFromPrefs() {
+                          SharedPreferences sp = getSharedPreferences("worktime_prefs", MODE_PRIVATE);
+                          boolean onDuty = sp.getBoolean("on_duty", false);
+                          float wLat = sp.getFloat("work_lat", 0);
+                          float wLng = sp.getFloat("work_lng", 0);
+                          String status = onDuty ? "工作中" : "未打卡";
+                          String location = (wLat != 0 || wLng != 0)
+                                  ? String.format("%.4f, %.4f", wLat, wLng)
+                                  : "未设置";
+                          updateUI(status, location);
+                      }
+                      private void sendBroadcastToWeb(String action) {
+                          Intent intent = new Intent("com.worktime.tracker.FLOAT_EVENT");
+                          intent.putExtra("action", action);
+                          sendBroadcast(intent);
+                      }
+                  }
+              '''))
+          print('Wrote FloatWindowService.java')
+
+          # === 5b. DummyVpnService.java (VPN 保活服务) ===
+          vp = os.path.join(src, 'DummyVpnService.java')
+          with open(vp, 'w', encoding='utf-8') as f:
+              f.write(textwrap.dedent('''\
+                  package com.worktime.tracker;
+                  import android.content.Intent;
+                  import android.net.VpnService;
+                  import android.os.IBinder;
+                  import android.os.ParcelFileDescriptor;
+                  import android.util.Log;
+                  import java.io.FileInputStream;
+                  import java.nio.ByteBuffer;
+                  public class DummyVpnService extends VpnService {
+                      private static final String TAG = "WorkTimeVPN";
+                      private static final String VPN_ADDRESS = "10.0.0.2";
+                      private static final int VPN_PREFIX_LENGTH = 32;
+                      private static final int MTU = 1280;
+                      private static final int NOTIF_ID = 9999;
+                      private ParcelFileDescriptor vpnInterface = null;
+                      private Thread guardThread = null;
+                      private volatile boolean running = false;
+                      @Override public void onCreate() {
+                          super.onCreate();
+                          Log.i(TAG, "DummyVpnService created");
+                      }
+                      @Override public int onStartCommand(Intent intent, int flags, int startId) {
+                          Log.i(TAG, "onStartCommand");
+                          if (!running) { startVpn(); }
+                          return START_STICKY;
+                      }
+                      @Override public IBinder onBind(Intent intent) { return null; }
+                      private void startVpn() {
+                          try {
+                              Builder builder = new Builder()
+                                      .setSession("工时打卡保活")
+                                      .setMtu(MTU)
+                                      .addAddress(VPN_ADDRESS, VPN_PREFIX_LENGTH);
+                              vpnInterface = builder.establish();
+                              if (vpnInterface == null) {
+                                  Log.e(TAG, "VPN establishment failed");
+                                  return;
+                              }
+                              running = true;
+                              Log.i(TAG, "Dummy VPN established");
+                              startForeground(NOTIF_ID, NotificationHelper.buildForeground(this, "工时打卡VPN保活", "正在运行中，防止系统杀后台"));
+                              guardThread = new Thread(() -> {
+                                  FileInputStream fis = new FileInputStream(vpnInterface.getFileDescriptor());
+                                  ByteBuffer buffer = ByteBuffer.allocate(1);
+                                  while (running) {
+                                      try {
+                                          fis.read(buffer.array());
+                                          Thread.sleep(30000);
+                                      } catch (Exception e) {
+                                          if (running) Log.w(TAG, "VPN read loop: " + e.getMessage());
+                                      }
+                                  }
+                              }, "VPN-Guard");
+                              guardThread.start();
+                          } catch (Exception e) {
+                              Log.e(TAG, "startVpn error", e);
+                          }
+                      }
+                      private void stopVpn() {
+                          running = false;
+                          if (guardThread != null) {
+                              guardThread.interrupt();
+                              guardThread = null;
+                          }
+                          if (vpnInterface != null) {
+                              try { vpnInterface.close(); } catch (Exception e) {}
+                              vpnInterface = null;
+                          }
+                          Log.i(TAG, "Dummy VPN stopped");
+                      }
+                      @Override public void onDestroy() {
+                          super.onDestroy();
+                          stopVpn();
+                      }
+                      @Override public void onRevoke() {
+                          Log.w(TAG, "VPN revoked");
+                          stopVpn();
+                          Intent restart = new Intent(this, DummyVpnService.class);
+                          startService(restart);
+                      }
+                  }
+              '''))
+          print('Wrote DummyVpnService.java')
+
+          # === 5. 悬浮窗布局 XML ===
+          layout_dir = os.path.join('android/app/src/main/res/layout')
+          os.makedirs(layout_dir, exist_ok=True)
+          fl = os.path.join(layout_dir, 'float_window_layout.xml')
+          with open(fl, 'w', encoding='utf-8') as f:
+              f.write("          <LinearLayout xmlns:android=\"http://schemas.android.com/apk/res/android\"\n              android:layout_width=\"wrap_content\"\n              android:layout_height=\"wrap_content\"\n              android:orientation=\"vertical\"\n              android:padding=\"16dp\"\n              android:background=\"@drawable/float_window_bg\"\n              android:gravity=\"center\">\n              <LinearLayout\n                  android:layout_width=\"wrap_content\"\n                  android:layout_height=\"wrap_content\"\n                  android:orientation=\"horizontal\"\n                  android:gravity=\"center_vertical\">\n                  <ImageView\n                      android:layout_width=\"24dp\"\n                      android:layout_height=\"24dp\"\n                      android:src=\"@android:drawable/ic_menu_mylocation\"\n                      android:tint=\"#4FC3F7\" />\n                  <TextView\n                      android:id=\"@+id/float_status\"\n                      android:layout_width=\"wrap_content\"\n                      android:layout_height=\"wrap_content\"\n                      android:layout_marginStart=\"8dp\"\n                      android:text=\"户外模式开启中\"\n                      android:textColor=\"#FFFFFF\"\n                      android:textSize=\"14sp\"\n                      android:textStyle=\"bold\" />\n              </LinearLayout>\n              <TextView\n                  android:id=\"@+id/float_location\"\n                  android:layout_width=\"wrap_content\"\n                  android:layout_height=\"wrap_content\"\n                  android:layout_marginTop=\"4dp\"\n                  android:text=\"已标记：鼎盛路聚丰科创产业园\"\n                  android:textColor=\"#B0BEC5\"\n                  android:textSize=\"11sp\"\n                  android:maxWidth=\"180dp\"\n                  android:ellipsize=\"end\"\n                  android:maxLines=\"2\" />\n              <LinearLayout\n                  android:layout_width=\"wrap_content\"\n                  android:layout_height=\"wrap_content\"\n                  android:layout_marginTop=\"12dp\"\n                  android:orientation=\"horizontal\">\n                  <ImageButton\n                      android:id=\"@+id/btn_relocate\"\n                      android:layout_width=\"40dp\"\n                      android:layout_height=\"40dp\"\n                      android:background=\"@drawable/float_btn_bg\"\n                      android:src=\"@android:drawable/ic_menu_edit\"\n                      android:tint=\"#FFFFFF\"\n                      android:contentDescription=\"重新标记\" />\n                  <ImageButton\n                      android:id=\"@+id/btn_navigate\"\n                      android:layout_width=\"40dp\"\n                      android:layout_height=\"40dp\"\n                      android:layout_marginStart=\"12dp\"\n                      android:background=\"@drawable/float_btn_bg\"\n                      android:src=\"@android:drawable/ic_menu_directions\"\n                      android:tint=\"#FFFFFF\"\n                      android:contentDescription=\"返航\" />\n                  <ImageButton\n                      android:id=\"@+id/btn_close\"\n                      android:layout_width=\"40dp\"\n                      android:layout_height=\"40dp\"\n                      android:layout_marginStart=\"12dp\"\n                      android:background=\"@drawable/float_btn_bg\"\n                      android:src=\"@android:drawable/ic_menu_close_clear_cancel\"\n                      android:tint=\"#FF5252\"\n                      android:contentDescription=\"关闭\" />\n              </LinearLayout>\n")
+              f.write("\n")
+          print('Wrote float_window_layout.xml')
+
+          # === 6. 悬浮窗背景 Drawable ===
+          drawable_dir = os.path.join('android/app/src/main/res/drawable')
+          os.makedirs(drawable_dir, exist_ok=True)
+          with open(os.path.join(drawable_dir, 'float_window_bg.xml'), 'w', encoding='utf-8') as f:
+              f.write("          <shape xmlns:android=\"http://schemas.android.com/apk/res/android\"\n              android:shape=\"rectangle\">\n              <solid android:color=\"#CC1A1A2E\" />\n              <corners android:radius=\"16dp\" />\n              <stroke android:width=\"1dp\" android:color=\"#33FFFFFF\" />\n")
+              f.write("\n")
+          with open(os.path.join(drawable_dir, 'float_btn_bg.xml'), 'w', encoding='utf-8') as f:
+              f.write("          <shape xmlns:android=\"http://schemas.android.com/apk/res/android\"\n              android:shape=\"oval\">\n              <solid android:color=\"#33FFFFFF\" />\n")
+              f.write("\n")
+          print('Wrote float window drawables')
+
+          # === 7. AlarmReceiver.java ===
+          ar = os.path.join(src, 'AlarmReceiver.java')
+          with open(ar, 'w', encoding='utf-8') as f:
+              f.write(textwrap.dedent('''\
+                  package com.worktime.tracker;
+                  import android.content.BroadcastReceiver;
+                  import android.content.Context;
+                  import android.content.Intent;
+                  import android.content.SharedPreferences;
+                  import android.util.Log;
+                  public class AlarmReceiver extends BroadcastReceiver {
+                      private static final String TAG = "WorkTimeAlarm";
+                      @Override public void onReceive(Context ctx, Intent intent) {
+                          Log.i(TAG, "Alarm triggered");
+                          SharedPreferences sp = ctx.getSharedPreferences("worktime_prefs", Context.MODE_PRIVATE);
+                          boolean onDuty = sp.getBoolean("on_duty", false);
+                          long endMs = sp.getLong("end_ms", 0);
+                          long nowMs = System.currentTimeMillis();
+                          String lastSign = sp.getString("last_sign", "");
+                          // 下班时间到且未签退 → 启动服务强制签退
+                          if (onDuty && nowMs >= endMs && !"out".equals(lastSign)) {
+                              Log.i(TAG, "End time reached, starting service to sign out");
+                              Intent svc = new Intent(ctx, WorkTimeService.class);
+                              if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                                  ctx.startForegroundService(svc);
+                              } else {
+                                  ctx.startService(svc);
+                              }
+                          }
+                        // 重新调度下一次：通过重启服务触发 onStartCommand → scheduleAlarm()
+                        Intent svc3 = new Intent(ctx, WorkTimeService.class);
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                            ctx.startForegroundService(svc3);
+                        } else {
+                            ctx.startService(svc3);
+                        }
+                      }
+                  }
+              '''))
+          print('Wrote AlarmReceiver.java')
+
+          # === 6. BootReceiver.java ===
+          br = os.path.join(src, 'BootReceiver.java')
+          with open(br, 'w', encoding='utf-8') as f:
+              f.write(textwrap.dedent('''\
+                  package com.worktime.tracker;
+                  import android.content.BroadcastReceiver;
+                  import android.content.Context;
+                  import android.content.Intent;
+                  import android.util.Log;
+                  public class BootReceiver extends BroadcastReceiver {
+                      private static final String TAG = "WorkTimeBoot";
+                      @Override public void onReceive(Context ctx, Intent intent) {
+                          if (Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) {
+                              Log.i(TAG, "Boot completed, starting WorkTimeService");
+                              Intent svc = new Intent(ctx, WorkTimeService.class);
+                              if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                                  ctx.startForegroundService(svc);
+                              } else {
+                                  ctx.startService(svc);
+                              }
+                          }
+                      }
+                  }
+              '''))
+          print('Wrote BootReceiver.java')
+
+          # === 7. WorkTimePlugin.java (Capacitor Plugin bridge) ===
+          wp = os.path.join(src, 'WorkTimePlugin.java')
+          with open(wp, 'w', encoding='utf-8') as f:
+              f.write(textwrap.dedent('''\
+                  package com.worktime.tracker;
+                  import android.content.Intent;
+                  import android.content.SharedPreferences;
+                  import android.os.Build;
+                  import android.provider.Settings;
+                  import com.getcapacitor.JSObject;
+                  import com.getcapacitor.Plugin;
+                  import com.getcapacitor.PluginCall;
+                  import com.getcapacitor.PluginMethod;
+                  import com.getcapacitor.annotation.CapacitorPlugin;
+                  @CapacitorPlugin(name = "WorkTimePlugin")
+                  public class WorkTimePlugin extends Plugin {
+                      @PluginMethod
+                      public void startService(PluginCall call) {
+                          Intent intent = new Intent(getContext(), WorkTimeService.class);
+                          if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                              getContext().startForegroundService(intent);
+                          } else {
+                              getContext().startService(intent);
+                          }
+                          call.resolve();
+                      }
+                      @PluginMethod
+                      public void stopService(PluginCall call) {
+                          Intent intent = new Intent(getContext(), WorkTimeService.class);
+                          getContext().stopService(intent);
+                          call.resolve();
+                      }
+                      @PluginMethod
+                      public void startVpnService(PluginCall call) {
+                          Intent intent = new Intent(getContext(), DummyVpnService.class);
+                          if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                              getContext().startForegroundService(intent);
+                          } else {
+                              getContext().startService(intent);
+                          }
+                          call.resolve();
+                      }
+                      @PluginMethod
+                      public void stopVpnService(PluginCall call) {
+                          Intent intent = new Intent(getContext(), DummyVpnService.class);
+                          getContext().stopService(intent);
+                          call.resolve();
+                      }
+                      @PluginMethod
+                      public void isVpnRunning(PluginCall call) {
+                          SharedPreferences sp = getContext().getSharedPreferences("worktime_prefs", getContext().MODE_PRIVATE);
+                          boolean running = sp.getBoolean("vpn_running", false);
+                          JSObject ret = new JSObject();
+                          ret.put("running", running);
+                          call.resolve(ret);
+                      }
+                      @PluginMethod
+                      public void showFloatWindow(PluginCall call) {
+                          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                              if (!Settings.canDrawOverlays(getContext())) {
+                                  call.reject("需要悬浮窗权限，请在设置中开启");
+                                  return;
+                              }
+                          }
+                          Intent intent = new Intent(getContext(), FloatWindowService.class);
+                          intent.putExtra("action", "show");
+                          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                              getContext().startForegroundService(intent);
+                          } else {
+                              getContext().startService(intent);
+                          }
+                          call.resolve();
+                      }
+                      @PluginMethod
+                      public void hideFloatWindow(PluginCall call) {
+                          Intent intent = new Intent(getContext(), FloatWindowService.class);
+                          intent.putExtra("action", "hide");
+                          getContext().startService(intent);
+                          call.resolve();
+                      }
+                      @PluginMethod
+                      public void checkFloatPermission(PluginCall call) {
+                          boolean granted = true;
+                          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                              granted = Settings.canDrawOverlays(getContext());
+                          }
+                          JSObject ret = new JSObject();
+                          ret.put("granted", granted);
+                          call.resolve(ret);
+                      }
+                      @PluginMethod
+                      public void syncSettings(PluginCall call) {
+                          JSObject data = call.getData();
+                          SharedPreferences sp = getContext().getSharedPreferences("worktime_prefs", getContext().MODE_PRIVATE);
+                          SharedPreferences.Editor ed = sp.edit();
+                          if (data.has("workLat")) ed.putFloat("work_lat", (float) data.optDouble("workLat", 0));
+                          if (data.has("workLng")) ed.putFloat("work_lng", (float) data.optDouble("workLng", 0));
+                          if (data.has("fenceRadius")) ed.putInt("fence_radius", data.optInt("fenceRadius", 200));
+                          if (data.has("startMs")) ed.putLong("start_ms", data.optLong("startMs", 0));
+                          if (data.has("endMs")) ed.putLong("end_ms", data.optLong("endMs", 0));
+                          if (data.has("autoCheckIn")) ed.putBoolean("auto_checkin", data.optBoolean("autoCheckIn", true));
+                          if (data.has("pollInterval")) ed.putInt("poll_interval_ms", data.optInt("pollInterval", 30000));
+                          ed.apply();
+                          call.resolve();
+                      }
+                  }
+              '''))
+          print('Wrote WorkTimePlugin.java')
+
+          print("All native services injected successfully!")
+          PYEOF
+
+      - name: Update AndroidManifest.xml for background services
+        run: |
+          python3 - <<'PYEOF'
+          import re
+          p = 'android/app/src/main/AndroidManifest.xml'
+          with open(p) as f:
+              m = f.read()
+          
+          # === 1. 添加所有必要权限 ===
+          permissions = [
+              '    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />',
+              '    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />',
+              '    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />',
+              '    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />',
+              '    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />',
+              '    <uses-permission android:name="android.permission.WAKE_LOCK" />',
+              '    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />',
+              '    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />',
+              '    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />',
+              '    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />',
+          ]
+          existing = []
+          for perm in permissions:
+              perm_name = perm.split('"')[1]
+              if perm_name not in m:
+                  existing.append(perm)
+                  print(f'Added {perm_name}')
+              else:
+                  print(f'{perm_name} already present')
+          
+          if existing:
+              block = '\n'.join(existing) + '\n'
+              m = re.sub(r'(</manifest>)', block + r'\1', m, count=1)
+          
+          # === 2. 在 <application> 内添加服务和广播接收器 ===
+          services = '''
+          <!-- VPN 保活服务：利用系统 VPN 特性防止杀后台 -->
+          <service android:name="com.worktime.tracker.DummyVpnService"
+              android:permission="android.permission.BIND_VPN_SERVICE"
+              android:exported="true">
+              <intent-filter>
+                  <action android:name="android.net.VpnService" />
+              </intent-filter>
+          </service>
+          <!-- 前台服务：后台定位与围栏检测 -->
+          <service android:name="com.worktime.tracker.WorkTimeService"
+              android:enabled="true"
+              android:exported="false"
+              android:foregroundServiceType="location" />
+          <!-- 悬浮窗服务：后台状态组件 -->
+          <service android:name="com.worktime.tracker.FloatWindowService"
+              android:enabled="true"
+              android:exported="false" />
+          <!-- 开机自启动广播 -->
+          <receiver android:name="com.worktime.tracker.BootReceiver"
+              android:enabled="true"
+              android:exported="true">
+              <intent-filter>
+                  <action android:name="android.intent.action.BOOT_COMPLETED" />
+              </intent-filter>
+          </receiver>
+          <!-- AlarmManager 定时唤醒广播 -->
+          <receiver android:name="com.worktime.tracker.AlarmReceiver"
+              android:enabled="true"
+              android:exported="false" />
+          '''
+          
+          if 'WorkTimeService' not in m:
+              # 插入到 </application> 之前
+              m = re.sub(r'(</application>)', services + r'\1', m, count=1)
+              print('Added WorkTimeService, BootReceiver, AlarmReceiver')
+          else:
+              print('Services already present')
+          
+          with open(p, 'w') as f:
+              f.write(m)
+          print("AndroidManifest.xml updated successfully")
+          PYEOF
+
+      - name: Build debug APK
+        run: |
+          cd android
+          ./gradlew assembleDebug
+
+      - name: Package APK for release
+        run: |
+          mkdir -p release
+          cp android/app/build/outputs/apk/debug/*.apk release/worktime-tracker.apk
+          ls -la release/
+
+      - name: Upload APK as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: worktime-tracker-debug
+          path: android/app/build/outputs/apk/debug/*.apk
+          retention-days: 7
+
+      - name: Create GitHub Release with APK
+        if: github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: "工时打卡 v${{ github.run_number }}"
+          body: |
+            🎯 工时定位签到系统 - 自动构建版本
+            
+            📱 **下载 APK**
+            下方 Assets 中点击 `worktime-tracker.apk` 即可下载安装
+            
+            ⚠️ **安装前请确保：**
+            - 开启「允许安装未知来源应用」
+            - 首次打开授予定位权限和通知权限
+            
+            🔧 **功能亮点：**
+            - 自动签到/签退（基于 GPS 围栏）
+            - 后台持续定位
+            - 工时统计与收入计算
+            - 打卡通知提醒
+          files: release/worktime-tracker.apk
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
