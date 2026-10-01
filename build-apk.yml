@@ -1,0 +1,1108 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Generate project config
+        run: |
+          # 删除旧配置文件避免冲突
+          rm -f capacitor.config.js capacitor.config.ts package.json package-lock.json
+          cat > package.json <<'JSONEOF'
+          {
+            "name": "worktime-tracker",
+            "version": "1.0.0",
+            "private": true,
+            "dependencies": {
+              "@capacitor/android": "^6.1.0",
+              "@capacitor/core": "^6.1.0",
+              "@capacitor/local-notifications": "^6.1.0"
+            },
+            "devDependencies": {
+              "@capacitor/cli": "^6.1.0"
+            }
+          }
+          JSONEOF
+          cat > capacitor.config.json <<'JSONEOF'
+          {
+            "appId": "com.worktime.tracker",
+            "appName": "工时打卡",
+            "webDir": "www",
+            "server": { "androidScheme": "https" },
+            "plugins": {
+              "SplashScreen": { "launchShowDuration": 0 }
+            }
+          }
+          JSONEOF
+
+      - name: Install dependencies
+        run: |
+          rm -rf node_modules package-lock.json
+          npm install
+
+      - name: Prepare web assets
+        run: |
+          mkdir -p www
+          cp index.html manifest.json sw.js www/
+          cp icon-192.png icon-512.png www/
+          if [ -d app-icon ]; then cp -r app-icon www/; fi
+
+      - name: Add Android platform (clean)
+        run: |
+          rm -rf android
+          npx cap add android
+
+      - name: Generate and replace Android app icons
+        run: |
+          pip install Pillow
+          python3 - <<'PYEOF'
+          from PIL import Image
+          import os
+          icon_paths = [
+              'app-icon/icon-512.png',
+              'icon-512.png',
+              'www/app-icon/icon-512.png',
+              'www/icon-512.png',
+          ]
+          src = None
+          for p in icon_paths:
+              if os.path.exists(p):
+                  src = Image.open(p)
+                  print('Found icon source at:', p)
+                  break
+          if src is None:
+              print('ERROR: No icon-512.png found. Creating fallback.')
+              src = Image.new('RGBA', (512, 512), (0, 200, 200, 255))
+          
+          sizes = {'mdpi':48, 'hdpi':72, 'xhdpi':96, 'xxhdpi':144, 'xxxhdpi':192}
+          for name, size in sizes.items():
+            d = f'android/app/src/main/res/mipmap-{name}'
+            os.makedirs(d, exist_ok=True)
+            img = src.resize((size, size), Image.LANCZOS)
+            img.save(f'{d}/ic_launcher.png')
+            img.save(f'{d}/ic_launcher_round.png')
+            print(f'Generated {d}/ic_launcher.png ({size}x{size})')
+          
+          anydpi = 'android/app/src/main/res/mipmap-anydpi-v26'
+          if os.path.exists(anydpi):
+            xml_file = f'{anydpi}/ic_launcher.xml'
+            if os.path.exists(xml_file):
+                os.remove(xml_file)
+                print(f'Removed {xml_file}')
+            img = src.resize((108, 108), Image.LANCZOS)
+            img.save(f'{anydpi}/ic_launcher_foreground.png')
+            print(f'Replaced {anydpi}/ic_launcher_foreground.png')
+          PYEOF
+
+      - name: Inject native services and register plugin
+        run: |
+          python3 - <<'PYEOF'
+          import os, textwrap, re
+
+          pkg = 'com/worktime/tracker'
+          src = f'android/app/src/main/java/{pkg}'
+          os.makedirs(src, exist_ok=True)
+
+          # 1. NotificationHelper
+          with open(os.path.join(src, 'NotificationHelper.java'), 'w') as f:
+              f.write(textwrap.dedent('''\
+                  package com.worktime.tracker;
+                  import android.app.Notification;
+                  import android.app.NotificationChannel;
+                  import android.app.NotificationManager;
+                  import android.content.Context;
+                  import android.os.Build;
+                  import androidx.core.app.NotificationCompat;
+                  public class NotificationHelper {
+                      private static final String CID = "worktime_channel";
+                      private static final String CNAME = "工时打卡后台服务";
+                      public static void createChannel(Context ctx) {
+                          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                              NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
+                              if (nm != null && nm.getNotificationChannel(CID) == null) {
+                                  NotificationChannel ch = new NotificationChannel(CID, CNAME, NotificationManager.IMPORTANCE_LOW);
+                                  ch.setDescription("持续定位与围栏检测");
+                                  ch.setShowBadge(false);
+                                  nm.createNotificationChannel(ch);
+                              }
+                          }
+                      }
+                      public static Notification buildForeground(Context ctx, String title, String body) {
+                          createChannel(ctx);
+                          return new NotificationCompat.Builder(ctx, CID)
+                              .setContentTitle(title).setContentText(body)
+                              .setSmallIcon(android.R.drawable.ic_menu_mylocation)
+                              .setOngoing(true).setPriority(NotificationCompat.PRIORITY_LOW).build();
+                      }
+                  }
+              '''))
+
+          # 2. LocationHelper
+          with open(os.path.join(src, 'LocationHelper.java'), 'w') as f:
+              f.write(textwrap.dedent('''\
+                  package com.worktime.tracker;
+                  import android.Manifest;
+                  import android.content.Context;
+                  import android.content.pm.PackageManager;
+                  import android.location.Location;
+                  import android.location.LocationListener;
+                  import android.location.LocationManager;
+                  import android.os.Bundle;
+                  import android.os.Handler;
+                  import android.os.Looper;
+                  import android.util.Log;
+                  import androidx.core.content.ContextCompat;
+                  public class LocationHelper {
+                      private static final String TAG = "WorkTimeLoc";
+                      private LocationManager lm;
+                      private LocationListener listener;
+                      private Handler handler = new Handler(Looper.getMainLooper());
+                      private Runnable timeoutRunnable;
+                      private OnLocationCallback callback;
+                      public interface OnLocationCallback {
+                          void onLocation(double lat, double lng, float accuracy);
+                          void onError(String msg);
+                      }
+                      public LocationHelper(Context ctx) {
+                          lm = (LocationManager) ctx.getSystemService(Context.LOCATION_SERVICE);
+                      }
+                      public void requestOnce(Context ctx, OnLocationCallback cb) {
+                          this.callback = cb;
+                          if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                              if (cb != null) cb.onError("No location permission"); return;
+                          }
+                          String provider = LocationManager.GPS_PROVIDER;
+                          if (!lm.isProviderEnabled(provider)) provider = LocationManager.NETWORK_PROVIDER;
+                          if (!lm.isProviderEnabled(provider)) {
+                              if (cb != null) cb.onError("No location provider available"); return;
+                          }
+                          listener = new LocationListener() {
+                              @Override public void onLocationChanged(Location loc) {
+                                  if (callback != null) callback.onLocation(loc.getLatitude(), loc.getLongitude(), loc.getAccuracy());
+                                  stop();
+                              }
+                              @Override public void onProviderEnabled(String p) {}
+                              @Override public void onProviderDisabled(String p) {}
+                              @Override public void onStatusChanged(String p, int s, Bundle e) {}
+                          };
+                          try { lm.requestLocationUpdates(provider, 0, 0, listener, Looper.getMainLooper()); }
+                          catch (Exception e) { Log.e(TAG, "requestLocationUpdates failed", e); if (cb != null) cb.onError(e.getMessage()); return; }
+                          timeoutRunnable = () -> { stop(); if (cb != null) cb.onError("Location timeout"); };
+                          handler.postDelayed(timeoutRunnable, 15000);
+                      }
+                      public void stop() {
+                          if (timeoutRunnable != null) handler.removeCallbacks(timeoutRunnable);
+                          if (listener != null) { try { lm.removeUpdates(listener); } catch (Exception e) {} listener = null; }
+                      }
+                  }
+              '''))
+
+          # 3. GeofenceHelper
+          with open(os.path.join(src, 'GeofenceHelper.java'), 'w') as f:
+              f.write(textwrap.dedent('''\
+                  package com.worktime.tracker;
+                  import android.content.Context;
+                  import android.content.SharedPreferences;
+                  import android.util.Log;
+                  public class GeofenceHelper {
+                      private static final String TAG = "WorkTimeFence";
+                      private static final String PREFS = "worktime_prefs";
+                      private static final double R = 6371000;
+                      public static boolean isInsideFence(Context ctx, double lat, double lng) {
+                          SharedPreferences sp = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+                          double wLat = sp.getFloat("work_lat", 0f), wLng = sp.getFloat("work_lng", 0f);
+                          int radius = sp.getInt("fence_radius", 200);
+                          if (wLat == 0 && wLng == 0) return false;
+                          double d = haversine(lat, lng, wLat, wLng);
+                          Log.d(TAG, "Distance=" + d + "m, radius=" + radius + "m, inside=" + (d <= radius));
+                          return d <= radius;
+                      }
+                      private static double haversine(double lat1, double lng1, double lat2, double lng2) {
+                          double dLat = Math.toRadians(lat2 - lat1), dLng = Math.toRadians(lng2 - lng1);
+                          double a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(Math.toRadians(lat1))*Math.cos(Math.toRadians(lat2))*Math.sin(dLng/2)*Math.sin(dLng/2);
+                          return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                      }
+                  }
+              '''))
+
+          # 4. WorkTimeService
+          with open(os.path.join(src, 'WorkTimeService.java'), 'w') as f:
+              f.write(textwrap.dedent('''\
+                  package com.worktime.tracker;
+                  import android.app.AlarmManager;
+                  import android.app.PendingIntent;
+                  import android.app.Service;
+                  import android.content.Context;
+                  import android.content.Intent;
+                  import android.content.SharedPreferences;
+                  import android.os.Build;
+                  import android.os.Handler;
+                  import android.os.IBinder;
+                  import android.os.Looper;
+                  import android.os.SystemClock;
+                  import android.util.Log;
+                  public class WorkTimeService extends Service {
+                      private static final String TAG = "WorkTimeSvc";
+                      private static final int NOTIF_ID = 1001;
+                      private Handler handler;
+                      private Runnable pollRunnable;
+                      private LocationHelper locHelper;
+                      private int pollIntervalMs = 30000;
+                      @Override public void onCreate() {
+                          super.onCreate();
+                          handler = new Handler(Looper.getMainLooper());
+                          locHelper = new LocationHelper(this);
+                          Log.i(TAG, "Service created");
+                      }
+                      @Override public int onStartCommand(Intent intent, int flags, int startId) {
+                          Log.i(TAG, "onStartCommand");
+                          SharedPreferences sp = getSharedPreferences("worktime_prefs", MODE_PRIVATE);
+                          pollIntervalMs = sp.getInt("poll_interval_ms", 30000);
+                          startForeground(NOTIF_ID, NotificationHelper.buildForeground(this, "工时打卡后台运行中", "定位监控与自动签到服务"));
+                          startPolling();
+                          scheduleAlarm();
+                          return START_STICKY;
+                      }
+                      private void startPolling() {
+                          if (pollRunnable != null) handler.removeCallbacks(pollRunnable);
+                          pollRunnable = new Runnable() {
+                              @Override public void run() {
+                                  doCheck();
+                                  handler.postDelayed(this, pollIntervalMs);
+                              }
+                          };
+                          handler.post(pollRunnable);
+                          Log.i(TAG, "Polling started, interval=" + pollIntervalMs + "ms");
+                      }
+                      private void doCheck() {
+                          Log.i(TAG, "doCheck - requesting location");
+                          locHelper.requestOnce(WorkTimeService.this, new LocationHelper.OnLocationCallback() {
+                              @Override public void onLocation(double lat, double lng, float acc) {
+                                  Log.i(TAG, "Location: " + lat + "," + lng + " acc=" + acc);
+                                  boolean inside = GeofenceHelper.isInsideFence(WorkTimeService.this, lat, lng);
+                                  SharedPreferences sp = getSharedPreferences("worktime_prefs", MODE_PRIVATE);
+                                  boolean onDuty = sp.getBoolean("on_duty", false);
+                                  long startMs = sp.getLong("start_ms", 0);
+                                  long nowMs = System.currentTimeMillis();
+                                  boolean autoCheckIn = sp.getBoolean("auto_checkin", true);
+                                  String lastSign = sp.getString("last_sign", "");
+                                  if (autoCheckIn && inside && !onDuty && !"in".equals(lastSign) && nowMs >= startMs) {
+                                      sign("in", startMs);
+                                      NotificationHelper.buildForeground(WorkTimeService.this, "工时打卡", "已到达工作地点，自动签到上班");
+                                  }
+                              }
+                              @Override public void onError(String msg) { Log.w(TAG, "Location error: " + msg); }
+                          });
+                      }
+                      private void sign(String type, long timeMs) {
+                          SharedPreferences sp = getSharedPreferences("worktime_prefs", MODE_PRIVATE);
+                          SharedPreferences.Editor ed = sp.edit();
+                          ed.putBoolean("on_duty", "in".equals(type));
+                          ed.putString("last_sign", type);
+                          ed.apply();
+                          Log.i(TAG, "Signed " + type + " at " + timeMs);
+                          Intent intent = new Intent("com.worktime.tracker.SIGN_EVENT");
+                          intent.putExtra("type", type);
+                          intent.putExtra("time", timeMs);
+                          sendBroadcast(intent);
+                      }
+                      private void scheduleAlarm() {
+                          AlarmManager am = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+                          Intent intent = new Intent(this, AlarmReceiver.class);
+                          PendingIntent pi = PendingIntent.getBroadcast(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+                          long triggerAt = SystemClock.elapsedRealtime() + 60000;
+                          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                              am.setExactAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, triggerAt, pi);
+                          } else {
+                              am.setRepeating(AlarmManager.ELAPSED_REALTIME_WAKEUP, triggerAt, 60000, pi);
+                          }
+                          Log.i(TAG, "Alarm scheduled");
+                      }
+                      @Override public IBinder onBind(Intent intent) { return null; }
+                      @Override public void onDestroy() {
+                          super.onDestroy();
+                          if (pollRunnable != null) handler.removeCallbacks(pollRunnable);
+                          locHelper.stop();
+                          Log.i(TAG, "Service destroyed, restarting...");
+                          startService(new Intent(this, WorkTimeService.class));
+                      }
+                  }
+              '''))
+
+          # 5. AlarmReceiver
+          with open(os.path.join(src, 'AlarmReceiver.java'), 'w') as f:
+              f.write(textwrap.dedent('''\
+                  package com.worktime.tracker;
+                  import android.content.BroadcastReceiver;
+                  import android.content.Context;
+                  import android.content.Intent;
+                  import android.util.Log;
+                  public class AlarmReceiver extends BroadcastReceiver {
+                      private static final String TAG = "WorkTimeAlarm";
+                      @Override public void onReceive(Context ctx, Intent intent) {
+                          Log.i(TAG, "Alarm triggered");
+                          Intent svc = new Intent(ctx, WorkTimeService.class);
+                          if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                              ctx.startForegroundService(svc);
+                          } else {
+                              ctx.startService(svc);
+                          }
+                      }
+                  }
+              '''))
+
+          # 6. BootReceiver
+          with open(os.path.join(src, 'BootReceiver.java'), 'w') as f:
+              f.write(textwrap.dedent('''\
+                  package com.worktime.tracker;
+                  import android.content.BroadcastReceiver;
+                  import android.content.Context;
+                  import android.content.Intent;
+                  import android.util.Log;
+                  public class BootReceiver extends BroadcastReceiver {
+                      private static final String TAG = "WorkTimeBoot";
+                      @Override public void onReceive(Context ctx, Intent intent) {
+                          if (Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) {
+                              Log.i(TAG, "Boot completed, starting service");
+                              Intent svc = new Intent(ctx, WorkTimeService.class);
+                              if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                                  ctx.startForegroundService(svc);
+                              } else {
+                                  ctx.startService(svc);
+                              }
+                          }
+                      }
+                  }
+              '''))
+
+          # 7. WorkTimePlugin
+          with open(os.path.join(src, 'WorkTimePlugin.java'), 'w') as f:
+              f.write(textwrap.dedent('''\
+                  package com.worktime.tracker;
+                  import android.app.Activity;
+                  import android.content.Context;
+                  import android.content.Intent;
+                  import android.content.SharedPreferences;
+                  import android.graphics.Color;
+                  import android.graphics.PixelFormat;
+                  import android.net.VpnService;
+                  import android.os.Build;
+                  import android.provider.Settings;
+                  import android.util.Log;
+                  import android.view.Gravity;
+                  import android.view.MotionEvent;
+                  import android.view.View;
+                  import android.view.WindowManager;
+                  import android.widget.ImageButton;
+                  import android.widget.LinearLayout;
+                  import android.widget.TextView;
+                  import com.getcapacitor.JSObject;
+                  import com.getcapacitor.Plugin;
+                  import com.getcapacitor.PluginCall;
+                  import com.getcapacitor.PluginMethod;
+                  import com.getcapacitor.annotation.CapacitorPlugin;
+                  @CapacitorPlugin(name = "WorkTimePlugin")
+                  public class WorkTimePlugin extends Plugin {
+                      private static final String TAG = "WorkTimePlugin";
+                      private WindowManager wm;
+                      private LinearLayout floatView;
+                      private WindowManager.LayoutParams floatParams;
+                      private boolean floatShown = false;
+                      @PluginMethod
+                      public void startService(PluginCall call) {
+                          Intent intent = new Intent(getContext(), WorkTimeService.class);
+                          if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                              getContext().startForegroundService(intent);
+                          } else {
+                              getContext().startService(intent);
+                          }
+                          call.resolve();
+                      }
+                      @PluginMethod
+                      public void stopService(PluginCall call) {
+                          getContext().stopService(new Intent(getContext(), WorkTimeService.class));
+                          call.resolve();
+                      }
+                      @PluginMethod
+                      public void syncSettings(PluginCall call) {
+                          JSObject data = call.getData();
+                          SharedPreferences sp = getContext().getSharedPreferences("worktime_prefs", getContext().MODE_PRIVATE);
+                          SharedPreferences.Editor ed = sp.edit();
+                          if (data.has("workLat")) ed.putFloat("work_lat", (float) data.optDouble("workLat", 0));
+                          if (data.has("workLng")) ed.putFloat("work_lng", (float) data.optDouble("workLng", 0));
+                          if (data.has("fenceRadius")) ed.putInt("fence_radius", data.optInt("fenceRadius", 200));
+                          if (data.has("startMs")) ed.putLong("start_ms", data.optLong("startMs", 0));
+                          if (data.has("endMs")) ed.putLong("end_ms", data.optLong("endMs", 0));
+                          if (data.has("autoCheckIn")) ed.putBoolean("auto_checkin", data.optBoolean("autoCheckIn", true));
+                          if (data.has("pollInterval")) ed.putInt("poll_interval_ms", data.optInt("pollInterval", 30000));
+                          ed.apply();
+                          call.resolve();
+                      }
+                      @PluginMethod
+                      public void checkFloatPermission(PluginCall call) {
+                          boolean granted = true;
+                          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                              granted = Settings.canDrawOverlays(getContext());
+                          }
+                          JSObject ret = new JSObject();
+                          ret.put("granted", granted);
+                          call.resolve(ret);
+                      }
+                      @PluginMethod
+                      public void showFloatWindow(PluginCall call) {
+                          Activity act = getActivity();
+                          if (act == null) { call.reject("No activity"); return; }
+                          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                              if (!Settings.canDrawOverlays(getContext())) {
+                                  Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION);
+                                  intent.setData(android.net.Uri.parse("package:" + getContext().getPackageName()));
+                                  act.startActivityForResult(intent, 1001);
+                                  call.reject("Need overlay permission, system dialog shown");
+                                  return;
+                              }
+                          }
+                          showFloatInternal();
+                          call.resolve();
+                      }
+                      @PluginMethod
+                      public void hideFloatWindow(PluginCall call) {
+                          hideFloatInternal();
+                          call.resolve();
+                      }
+                      private void showFloatInternal() {
+                          if (floatShown) return;
+                          wm = (WindowManager) getContext().getSystemService(Context.WINDOW_SERVICE);
+                          floatView = new LinearLayout(getContext());
+                          floatView.setOrientation(LinearLayout.VERTICAL);
+                          floatView.setPadding(24, 24, 24, 24);
+                          floatView.setGravity(Gravity.CENTER);
+                          floatView.setBackgroundColor(Color.parseColor("#CC1A1A2E"));
+                          TextView tv = new TextView(getContext());
+                          tv.setText("工时打卡");
+                          tv.setTextColor(Color.WHITE);
+                          tv.setTextSize(14);
+                          floatView.addView(tv);
+                          ImageButton btn = new ImageButton(getContext());
+                          btn.setImageResource(android.R.drawable.ic_menu_close_clear_cancel);
+                          btn.setColorFilter(Color.WHITE);
+                          btn.setOnClickListener(v -> hideFloatInternal());
+                          floatView.addView(btn);
+                          floatView.setOnTouchListener(new View.OnTouchListener() {
+                              private float lastX, lastY;
+                              private int initX, initY;
+                              public boolean onTouch(View v, MotionEvent ev) {
+                                  switch (ev.getAction()) {
+                                      case MotionEvent.ACTION_DOWN:
+                                          lastX = ev.getRawX(); lastY = ev.getRawY();
+                                          initX = floatParams.x; initY = floatParams.y;
+                                          return false;
+                                      case MotionEvent.ACTION_MOVE:
+                                          float dx = ev.getRawX() - lastX;
+                                          float dy = ev.getRawY() - lastY;
+                                          floatParams.x = initX + (int) dx;
+                                          floatParams.y = initY + (int) dy;
+                                          wm.updateViewLayout(floatView, floatParams);
+                                          return true;
+                                  }
+                                  return false;
+                              }
+                          });
+                          int type = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+                              ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+                              : WindowManager.LayoutParams.TYPE_PHONE;
+                          floatParams = new WindowManager.LayoutParams(
+                              WindowManager.LayoutParams.WRAP_CONTENT,
+                              WindowManager.LayoutParams.WRAP_CONTENT,
+                              type,
+                              WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE |
+                              WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+                              PixelFormat.TRANSLUCENT);
+                          floatParams.gravity = Gravity.TOP | Gravity.START;
+                          floatParams.x = 0; floatParams.y = 200;
+                          try {
+                              wm.addView(floatView, floatParams);
+                              floatShown = true;
+                          } catch (Exception e) {
+                              Log.e(TAG, "show float failed", e);
+                          }
+                      }
+                      private void hideFloatInternal() {
+                          if (!floatShown || floatView == null) return;
+                          try { wm.removeView(floatView); } catch (Exception e) {}
+                          floatShown = false;
+                      }
+                      @PluginMethod
+                      public void startVpnService(PluginCall call) {
+                          Intent intent = VpnService.prepare(getContext());
+                          if (intent != null) {
+                              getActivity().startActivityForResult(intent, 1002);
+                              call.reject("VPN permission needed, system dialog shown");
+                          } else {
+                              Intent svc = new Intent(getContext(), DummyVpnService.class);
+                              if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                  getContext().startForegroundService(svc);
+                              } else {
+                                  getContext().startService(svc);
+                              }
+                              call.resolve();
+                          }
+                      }
+                      @PluginMethod
+                      public void stopVpnService(PluginCall call) {
+                          getContext().stopService(new Intent(getContext(), DummyVpnService.class));
+                          call.resolve();
+                      }
+                      @PluginMethod
+                      public void isVpnRunning(PluginCall call) {
+                          JSObject ret = new JSObject();
+                          ret.put("running", DummyVpnService.isRunning);
+                          call.resolve(ret);
+                      }
+                  }
+              '''))
+
+          # 7b. DummyVpnService
+          with open(os.path.join(src, 'DummyVpnService.java'), 'w') as f:
+              f.write(textwrap.dedent('''\
+                  package com.worktime.tracker;
+                  import android.app.Notification;
+                  import android.app.PendingIntent;
+                  import android.content.Intent;
+                  import android.net.VpnService;
+                  import android.os.ParcelFileDescriptor;
+                  import android.util.Log;
+                  import java.io.FileInputStream;
+                  import java.nio.ByteBuffer;
+                  public class DummyVpnService extends VpnService {
+                      private static final String TAG = "WorkTimeVPN";
+                      public static volatile boolean isRunning = false;
+                      private ParcelFileDescriptor vpnInterface = null;
+                      private Thread guardThread = null;
+                      private volatile boolean running = false;
+                      @Override public void onCreate() {
+                          super.onCreate();
+                          Log.i(TAG, "DummyVpnService created");
+                      }
+                      @Override public int onStartCommand(Intent intent, int flags, int startId) {
+                          Log.i(TAG, "onStartCommand");
+                          if (!running) startVpn();
+                          return START_STICKY;
+                      }
+                      private void startVpn() {
+                          try {
+                              android.net.VpnService.Builder builder = new android.net.VpnService.Builder()
+                                  .setSession("工时打卡保活")
+                                  .setMtu(1280)
+                                  .addAddress("10.0.0.2", 32);
+                              vpnInterface = builder.establish();
+                              if (vpnInterface == null) { Log.e(TAG, "VPN establishment failed"); return; }
+                              running = true; isRunning = true;
+                              Log.i(TAG, "Dummy VPN established");
+                              Notification n = NotificationHelper.buildForeground(this, "工时打卡VPN保活", "正在运行中，防止系统杀后台");
+                              startForeground(9999, n);
+                              guardThread = new Thread(() -> {
+                                  FileInputStream fis = new FileInputStream(vpnInterface.getFileDescriptor());
+                                  ByteBuffer buf = ByteBuffer.allocate(1);
+                                  while (running) {
+                                      try { fis.read(buf.array()); Thread.sleep(30000); }
+                                      catch (Exception e) { if (running) Log.w(TAG, "VPN read: " + e.getMessage()); }
+                                  }
+                              }, "VPN-Guard");
+                              guardThread.start();
+                          } catch (Exception e) { Log.e(TAG, "startVpn error", e); }
+                      }
+                      private void stopVpn() {
+                          running = false; isRunning = false;
+                          if (guardThread != null) { guardThread.interrupt(); guardThread = null; }
+                          if (vpnInterface != null) { try { vpnInterface.close(); } catch (Exception e) {} vpnInterface = null; }
+                          Log.i(TAG, "Dummy VPN stopped");
+                      }
+                      @Override public void onDestroy() { super.onDestroy(); stopVpn(); }
+                      @Override public void onRevoke() {
+                          Log.w(TAG, "VPN revoked");
+                          stopVpn();
+                          startService(new Intent(this, DummyVpnService.class));
+                      }
+                  }
+              '''))
+          print('Wrote WorkTimePlugin.java and DummyVpnService.java')
+
+          # 7c. BaiduMapPlugin
+          baidu_pkg = 'com/worktime/baidumap'
+          baidu_src = f'android/app/src/main/java/{baidu_pkg}'
+          os.makedirs(baidu_src, exist_ok=True)
+          with open(os.path.join(baidu_src, 'BaiduMapPlugin.java'), 'w') as f:
+              f.write(textwrap.dedent('''                  package com.worktime.baidumap;
+                  import android.app.Activity;
+                  import android.graphics.Color;
+                  import android.util.Log;
+                  import android.view.View;
+                  import android.view.ViewGroup;
+                  import android.widget.FrameLayout;
+                  import com.baidu.mapapi.SDKInitializer;
+                  import com.baidu.mapapi.map.BaiduMap;
+                  import com.baidu.mapapi.map.BitmapDescriptor;
+                  import com.baidu.mapapi.map.BitmapDescriptorFactory;
+                  import com.baidu.mapapi.map.CircleOptions;
+                  import com.baidu.mapapi.map.MapStatus;
+                  import com.baidu.mapapi.map.MapStatusUpdate;
+                  import com.baidu.mapapi.map.MapStatusUpdateFactory;
+                  import com.baidu.mapapi.map.MapView;
+                  import com.baidu.mapapi.map.MarkerOptions;
+                  import com.baidu.mapapi.map.OverlayOptions;
+                  import com.baidu.mapapi.model.LatLng;
+                  import com.baidu.mapapi.offline.MKOLSearchRecord;
+                  import com.baidu.mapapi.offline.MKOLUpdateElement;
+                  import com.baidu.mapapi.offline.MKOfflineMap;
+                  import com.getcapacitor.JSObject;
+                  import com.getcapacitor.Plugin;
+                  import com.getcapacitor.PluginCall;
+                  import com.getcapacitor.PluginMethod;
+                  import com.getcapacitor.annotation.CapacitorPlugin;
+                  import org.json.JSONArray;
+                  import org.json.JSONObject;
+                  import java.util.ArrayList;
+                  @CapacitorPlugin(name = "BaiduMap")
+                  public class BaiduMapPlugin extends Plugin {
+                      private static final String TAG = "BaiduMapPlugin";
+                      private MapView mapView = null;
+                      private BaiduMap baiduMap = null;
+                      private FrameLayout mapContainer = null;
+                      private MKOfflineMap offlineMap = null;
+                      private com.baidu.mapapi.map.Marker workMarker = null;
+                      private com.baidu.mapapi.map.Marker posMarker = null;
+                      private com.baidu.mapapi.map.Circle fenceCircle = null;
+                      @Override
+                      public void load() {
+                          super.load();
+                          try {
+                              SDKInitializer.setAgreePrivacy(getContext().getApplicationContext(), true);
+                              SDKInitializer.initialize(getContext().getApplicationContext());
+                              Log.d(TAG, "Baidu Map SDK initialized");
+                          } catch (Exception e) {
+                              Log.e(TAG, "Failed to init Baidu Map SDK: " + e.getMessage());
+                          }
+                          offlineMap = new MKOfflineMap();
+                      }
+                      @Override
+                      protected void handleOnDestroy() {
+                          super.handleOnDestroy();
+                          if (offlineMap != null) offlineMap.destroy();
+                          if (mapView != null) mapView.onDestroy();
+                      }
+                      @Override protected void handleOnPause() { super.handleOnPause(); if (mapView != null) mapView.onPause(); }
+                      @Override protected void handleOnResume() { super.handleOnResume(); if (mapView != null) mapView.onResume(); }
+                      @PluginMethod
+                      public void initializeMap(PluginCall call) {
+                          getActivity().runOnUiThread(() -> {
+                              try {
+                                  JSObject config = call.getObject("config", new JSObject());
+                                  double lat = config.optDouble("lat", 39.9088);
+                                  double lng = config.optDouble("lng", 116.3974);
+                                  float zoom = (float) config.optDouble("zoom", 18);
+                                  Activity activity = getActivity();
+                                  ViewGroup rootView = (ViewGroup) activity.getWindow().getDecorView().findViewById(android.R.id.content);
+                                  if (mapContainer != null) { rootView.removeView(mapContainer); }
+                                  mapContainer = new FrameLayout(activity);
+                                  mapContainer.setLayoutParams(new FrameLayout.LayoutParams(
+                                          ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+                                  mapView = new MapView(activity);
+                                  mapView.setLayoutParams(new FrameLayout.LayoutParams(
+                                          ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+                                  mapContainer.addView(mapView);
+                                  ViewGroup webViewParent = (ViewGroup) bridge.getWebView().getParent();
+                                  webViewParent.addView(mapContainer, 0);
+                                  baiduMap = mapView.getMap();
+                                  baiduMap.setMyLocationEnabled(false);
+                                  LatLng center = new LatLng(lat, lng);
+                                  MapStatus mapStatus = new MapStatus.Builder().target(center).zoom(zoom).build();
+                                  baiduMap.setMapStatus(MapStatusUpdateFactory.newMapStatus(mapStatus));
+                                  baiduMap.getUiSettings().setScrollGesturesEnabled(true);
+                                  baiduMap.getUiSettings().setZoomGesturesEnabled(true);
+                                  baiduMap.getUiSettings().setRotateGesturesEnabled(false);
+                                  baiduMap.setMapType(BaiduMap.MAP_TYPE_NORMAL);
+                                  JSObject result = new JSObject();
+                                  result.put("success", true);
+                                  call.resolve(result);
+                              } catch (Exception e) {
+                                  Log.e(TAG, "initializeMap error: " + e.getMessage());
+                                  call.reject("Map initialization failed: " + e.getMessage());
+                              }
+                          });
+                      }
+                      @PluginMethod
+                      public void setMapType(PluginCall call) {
+                          getActivity().runOnUiThread(() -> {
+                              try {
+                                  if (baiduMap == null) { call.reject("Map not initialized"); return; }
+                                  String type = call.getString("type", "normal");
+                                  if ("satellite".equals(type)) baiduMap.setMapType(BaiduMap.MAP_TYPE_SATELLITE);
+                                  else if ("3d".equals(type)) { baiduMap.setMapType(BaiduMap.MAP_TYPE_NORMAL); }
+                                  else baiduMap.setMapType(BaiduMap.MAP_TYPE_NORMAL);
+                                  JSObject result = new JSObject(); result.put("success", true); call.resolve(result);
+                              } catch (Exception e) { call.reject("Failed: " + e.getMessage()); }
+                          });
+                      }
+                      @PluginMethod
+                      public void setCenter(PluginCall call) {
+                          getActivity().runOnUiThread(() -> {
+                              try {
+                                  if (baiduMap == null) { call.reject("Map not initialized"); return; }
+                                  JSObject mapData = call.getData();
+                                  double lat = mapData.optDouble("lat", 39.9088);
+                                  double lng = mapData.optDouble("lng", 116.3974);
+                                  float zoom = mapData.has("zoom") ? (float) mapData.optDouble("zoom", -1) : -1f;
+                                  LatLng center = new LatLng(lat, lng);
+                                  if (zoom > 0) {
+                                      baiduMap.setMapStatus(MapStatusUpdateFactory.newMapStatus(
+                                          new MapStatus.Builder().target(center).zoom(zoom).build()));
+                                  } else {
+                                      baiduMap.setMapStatus(MapStatusUpdateFactory.newLatLng(center));
+                                  }
+                                  JSObject result = new JSObject(); result.put("success", true); call.resolve(result);
+                              } catch (Exception e) { call.reject("Failed: " + e.getMessage()); }
+                          });
+                      }
+                      @PluginMethod
+                      public void addWorkMarker(PluginCall call) {
+                          getActivity().runOnUiThread(() -> {
+                              try {
+                                  if (baiduMap == null) { call.reject("Map not initialized"); return; }
+                                  double lat = call.getData().optDouble("lat", 39.9088);
+                                  double lng = call.getData().optDouble("lng", 116.3974);
+                                  String title = call.getString("title", "工作地点");
+                                  LatLng position = new LatLng(lat, lng);
+                                  if (workMarker != null) workMarker.remove();
+                                  BitmapDescriptor icon = BitmapDescriptorFactory.fromResource(android.R.drawable.ic_menu_mylocation);
+                                  OverlayOptions markerOptions = new MarkerOptions().position(position).icon(icon).title(title).draggable(false);
+                                  workMarker = (com.baidu.mapapi.map.Marker) baiduMap.addOverlay(markerOptions);
+                                  JSObject result = new JSObject(); result.put("success", true); call.resolve(result);
+                              } catch (Exception e) { call.reject("Failed: " + e.getMessage()); }
+                          });
+                      }
+                      @PluginMethod
+                      public void updatePosition(PluginCall call) {
+                          getActivity().runOnUiThread(() -> {
+                              try {
+                                  if (baiduMap == null) { call.reject("Map not initialized"); return; }
+                                  double lat = call.getData().optDouble("lat", 39.9088);
+                                  double lng = call.getData().optDouble("lng", 116.3974);
+                                  LatLng position = new LatLng(lat, lng);
+                                  if (posMarker != null) posMarker.remove();
+                                  BitmapDescriptor icon = BitmapDescriptorFactory.fromResource(android.R.drawable.ic_menu_compass);
+                                  OverlayOptions markerOptions = new MarkerOptions().position(position).icon(icon).title("我的位置").draggable(false);
+                                  posMarker = (com.baidu.mapapi.map.Marker) baiduMap.addOverlay(markerOptions);
+                                  JSObject result = new JSObject(); result.put("success", true); call.resolve(result);
+                              } catch (Exception e) { call.reject("Failed: " + e.getMessage()); }
+                          });
+                      }
+                      @PluginMethod
+                      public void drawFence(PluginCall call) {
+                          getActivity().runOnUiThread(() -> {
+                              try {
+                                  if (baiduMap == null) { call.reject("Map not initialized"); return; }
+                                  double lat = call.getData().optDouble("lat", 39.9088);
+                                  double lng = call.getData().optDouble("lng", 116.3974);
+                                  int radius = call.getData().optInt("radius", 200);
+                                  LatLng center = new LatLng(lat, lng);
+                                  if (fenceCircle != null) fenceCircle.remove();
+                                  int color = Color.parseColor("#22c55e");
+                                  CircleOptions circleOptions = new CircleOptions().center(center).radius(radius)
+                                          .fillColor(Color.argb(15, Color.red(color), Color.green(color), Color.blue(color)))
+                                          .stroke(new com.baidu.mapapi.map.Stroke(2, Color.argb(90, Color.red(color), Color.green(color), Color.blue(color))));
+                                  fenceCircle = (com.baidu.mapapi.map.Circle) baiduMap.addOverlay(circleOptions);
+                                  JSObject result = new JSObject(); result.put("success", true); call.resolve(result);
+                              } catch (Exception e) { call.reject("Failed: " + e.getMessage()); }
+                          });
+                      }
+                      @PluginMethod
+                      public void toggleTraffic(PluginCall call) {
+                          getActivity().runOnUiThread(() -> {
+                              try {
+                                  if (baiduMap == null) { call.reject("Map not initialized"); return; }
+                                  boolean enabled = call.getData().optBoolean("enabled", false);
+                                  baiduMap.setTrafficEnabled(enabled);
+                                  JSObject result = new JSObject(); result.put("success", true); result.put("enabled", enabled); call.resolve(result);
+                              } catch (Exception e) { call.reject("Failed: " + e.getMessage()); }
+                          });
+                      }
+                      @PluginMethod
+                      public void setMapVisibility(PluginCall call) {
+                          getActivity().runOnUiThread(() -> {
+                              try {
+                                  if (mapContainer == null) { call.reject("Map not initialized"); return; }
+                                  boolean visible = call.getData().optBoolean("visible", true);
+                                  mapContainer.setVisibility(visible ? View.VISIBLE : View.GONE);
+                                  JSObject result = new JSObject(); result.put("success", true); call.resolve(result);
+                              } catch (Exception e) { call.reject("Failed: " + e.getMessage()); }
+                          });
+                      }
+                      @PluginMethod
+                      public void downloadOfflineCity(PluginCall call) {
+                          getActivity().runOnUiThread(() -> {
+                              try {
+                                  if (offlineMap == null) { call.reject("Offline map not initialized"); return; }
+                                  int cityId = call.getData().optInt("cityId", 131);
+                                  offlineMap.start(cityId);
+                                  JSObject result = new JSObject(); result.put("success", true); result.put("cityId", cityId); call.resolve(result);
+                              } catch (Exception e) { call.reject("Failed: " + e.getMessage()); }
+                          });
+                      }
+                      @Override
+                      @PluginMethod
+                      public void destroyMap(PluginCall call) {
+                          getActivity().runOnUiThread(() -> {
+                              try {
+                                  if (mapContainer != null) {
+                                      ViewGroup parent = (ViewGroup) mapContainer.getParent();
+                                      if (parent != null) parent.removeView(mapContainer);
+                                  }
+                                  if (mapView != null) { mapView.onDestroy(); mapView = null; }
+                                  baiduMap = null; mapContainer = null;
+                                  JSObject result = new JSObject(); result.put("success", true); call.resolve(result);
+                              } catch (Exception e) { call.reject("Failed: " + e.getMessage()); }
+                          });
+                      }
+                  }
+              '''))
+          print('Wrote BaiduMapPlugin.java')
+
+          # 8. Register WorkTimePlugin in MainActivity
+          main = os.path.join(src, 'MainActivity.java')
+          with open(main, 'r') as f:
+              content = f.read()
+          if 'import com.worktime.tracker.WorkTimePlugin' not in content:
+              content = content.replace(
+                  'import com.getcapacitor.BridgeActivity;',
+                  'import com.getcapacitor.BridgeActivity;\nimport com.worktime.tracker.WorkTimePlugin;'
+              )
+          if 'registerPlugin(WorkTimePlugin.class)' not in content:
+              content = content.replace(
+                  'super.onCreate(savedInstanceState);',
+                  'super.onCreate(savedInstanceState);\n        registerPlugin(WorkTimePlugin.class);'
+              )
+          with open(main, 'w') as f:
+              f.write(content)
+          print("WorkTimePlugin registered in MainActivity")
+
+          # 9. Update AndroidManifest.xml
+          manifest = 'android/app/src/main/AndroidManifest.xml'
+          with open(manifest) as f:
+              m = f.read()
+
+          perms = [
+              '    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />',
+              '    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />',
+              '    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />',
+              '    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />',
+              '    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />',
+              '    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />',
+              '    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />',
+              '    <uses-permission android:name="android.permission.WAKE_LOCK" />',
+              '    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />',
+              '    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />',
+              '    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />',
+              '    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />',
+          ]
+          added = []
+          for perm in perms:
+              name = perm.split('"')[1]
+              if name not in m:
+                  added.append(perm)
+                  print(f'Added {name}')
+              else:
+                  print(f'{name} already present')
+          if added:
+              block = '\n'.join(added) + '\n'
+              m = re.sub(r'(</manifest>)', block + r'\1', m, count=1)
+
+          services = '''\n          <!-- 前台服务：后台定位与围栏检测 -->\n          <service android:name="com.worktime.tracker.WorkTimeService"\n              android:enabled="true"\n              android:exported="false"\n              android:foregroundServiceType="location" />\n          <!-- VPN 保活服务 -->\n          <service android:name="com.worktime.tracker.DummyVpnService"\n              android:permission="android.permission.BIND_VPN_SERVICE"\n              android:exported="true">\n              <intent-filter>\n                  <action android:name="android.net.VpnService" />\n              </intent-filter>\n          </service>\n          <!-- 开机自启动广播 -->\n          <receiver android:name="com.worktime.tracker.BootReceiver"\n              android:enabled="true"\n              android:exported="true">\n              <intent-filter>\n                  <action android:name="android.intent.action.BOOT_COMPLETED" />\n              </intent-filter>\n          </receiver>\n          <!-- AlarmManager 定时唤醒广播 -->\n          <receiver android:name="com.worktime.tracker.AlarmReceiver"\n              android:enabled="true"\n              android:exported="false" />\n          '''
+          if 'WorkTimeService' not in m:
+              m = re.sub(r'(</application>)', services + r'\1', m, count=1)
+              print('Added services')
+          else:
+              print('Services already present')
+
+          with open(manifest, 'w') as f:
+              f.write(m)
+          print("AndroidManifest.xml updated")
+          PYEOF
+
+      - name: Add Baidu Map SDK dependencies
+        run: |
+          # Add Baidu Map SDK to build.gradle
+          build_gradle="android/app/build.gradle"
+          if [ -f "$build_gradle" ]; then
+            # Add mavenCentral if not present
+            if ! grep -q "mavenCentral()" "$build_gradle"; then
+              sed -i 's/repositories {/repositories {\n        mavenCentral()/' "$build_gradle"
+            fi
+            # Add Baidu Map dependencies
+            if ! grep -q "BaiduMapSDK_Map" "$build_gradle"; then
+              sed -i '/dependencies {/a\    implementation '"'"'com.baidu.lbsyun:BaiduMapSDK_Map:7.5.8'"'"'\n    implementation '"'"'com.baidu.lbsyun:BaiduMapSDK_Search:7.5.8'"'"'\n    implementation '"'"'com.baidu.lbsyun:BaiduMapSDK_Util:7.5.8'"'"'\n    implementation '"'"'com.baidu.lbsyun:BaiduMapSDK_Location:9.7.0'"'"'' "$build_gradle"
+              echo "Added Baidu Map SDK dependencies"
+            else
+              echo "Baidu Map SDK dependencies already present"
+            fi
+          fi
+
+      - name: Register BaiduMapPlugin in MainActivity
+        run: |
+          python3 - <<'PYEOF'
+          import os, re
+          src = 'android/app/src/main/java/com/worktime/tracker'
+          main = os.path.join(src, 'MainActivity.java')
+          if os.path.exists(main):
+            with open(main, 'r') as f:
+              content = f.read()
+            if 'import com.worktime.baidumap.BaiduMapPlugin' not in content:
+              content = content.replace(
+                'import com.getcapacitor.BridgeActivity;',
+                'import com.getcapacitor.BridgeActivity;\nimport com.worktime.baidumap.BaiduMapPlugin;'
+              )
+            if 'registerPlugin(BaiduMapPlugin.class)' not in content:
+              content = content.replace(
+                'super.onCreate(savedInstanceState);',
+                'super.onCreate(savedInstanceState);\n        registerPlugin(BaiduMapPlugin.class);'
+              )
+            with open(main, 'w') as f:
+              f.write(content)
+            print("BaiduMapPlugin registered in MainActivity")
+          else:
+            print("WARNING: MainActivity.java not found")
+          PYEOF
+
+      - name: Sync and build
+        run: |
+          npx cap sync android
+          npx cap copy android
+          # Add Baidu Map AK after sync (to avoid being overwritten)
+          manifest="android/app/src/main/AndroidManifest.xml"
+          if [ -f "$manifest" ]; then
+            if ! grep -q "com.baidu.lbsapi.API_KEY" "$manifest"; then
+              python3 -c "
+          import sys
+          manifest = sys.argv[1]
+          with open(manifest, 'r') as f:
+              content = f.read()
+          # Only replace the LAST </application> tag
+          parts = content.rsplit('</application>', 1)
+          if len(parts) == 2:
+              content = parts[0] + '        <meta-data android:name=\"com.baidu.lbsapi.API_KEY\" android:value=\"iv6XaQG0PkWGA9SPaLtzs9S0pPhPTr7u\" />\n    </application>' + parts[1]
+              with open(manifest, 'w') as f:
+                  f.write(content)
+              print('Added Baidu Map AK to AndroidManifest')
+          else:
+              print('WARNING: </application> tag not found, cannot add Baidu Map AK')
+              " "$manifest"
+            else
+              echo "Baidu Map AK already present"
+            fi
+          fi
+          # 手动注册 WorkTimePlugin 到 bridge
+          cat > /tmp/register_plugin.py <<'PYEOF'
+          import json, os
+          plugins_file = 'android/app/src/main/assets/capacitor.plugins.json'
+          if os.path.exists(plugins_file):
+              with open(plugins_file, 'r') as f:
+                  data = json.load(f)
+              found = False
+              for p in data:
+                  if p.get('pkg') == 'com.worktime.tracker':
+                      found = True
+                      break
+              if not found:
+                  data.append({
+                      "pkg": "com.worktime.tracker",
+                      "classpath": "com.worktime.tracker.WorkTimePlugin"
+                  })
+                  with open(plugins_file, 'w') as f:
+                      json.dump(data, f, indent=2)
+                  print("Added WorkTimePlugin to capacitor.plugins.json")
+              else:
+                  print("WorkTimePlugin already in capacitor.plugins.json")
+          else:
+              print("WARNING: capacitor.plugins.json not found")
+          bridge_file = 'android/app/src/main/assets/public/capacitor.js'
+          if os.path.exists(bridge_file):
+              with open(bridge_file, 'r') as f:
+                  content = f.read()
+              if 'WorkTimePlugin' in content:
+                  print("WorkTimePlugin found in bridge JS")
+              else:
+                  print("WARNING: WorkTimePlugin NOT found in bridge JS, injecting...")
+                  plugin_reg = "const WorkTimePlugin = registerPlugin('WorkTimePlugin');"
+                  if "const LocalNotifications = registerPlugin('LocalNotifications');" in content:
+                      content = content.replace(
+                          "const LocalNotifications = registerPlugin('LocalNotifications');",
+                          "const LocalNotifications = registerPlugin('LocalNotifications');\n" + plugin_reg
+                      )
+                      with open(bridge_file, 'w') as f:
+                          f.write(content)
+                      print("Injected WorkTimePlugin into bridge JS")
+          else:
+              print("WARNING: bridge JS not found")
+          PYEOF
+          python3 /tmp/register_plugin.py
+          cd android
+          ./gradlew assembleDebug
+
+      - name: Package and release
+        run: |
+          mkdir -p release
+          cp android/app/build/outputs/apk/debug/*.apk release/worktime-tracker.apk
+          ls -la release/
+
+      - name: Upload APK as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: worktime-tracker-debug
+          path: android/app/build/outputs/apk/debug/*.apk
+          retention-days: 7
+
+      - name: Create GitHub Release with APK
+        if: github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: "工时打卡 v${{ github.run_number }}"
+          body: |
+            🎯 工时定位签到系统 - 自动构建版本
+            
+            📱 **下载 APK**
+            下方 Assets 中点击 `worktime-tracker.apk` 即可下载安装
+            
+            ⚠️ **安装前请确保：**
+            - 开启「允许安装未知来源应用」
+            - 首次打开授予定位权限和通知权限
+            
+            🔧 **功能亮点：**
+            - 自动签到/签退（基于 GPS 围栏）
+            - 后台持续定位
+            - 工时统计与收入计算
+            - 打卡通知提醒
+          files: release/worktime-tracker.apk
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
