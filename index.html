@@ -79,13 +79,15 @@ main{padding:14px;max-width:720px;margin:0 auto;padding-bottom:80px}
   background:linear-gradient(180deg,rgba(21,34,58,.7),rgba(13,22,38,.7));
   border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:12px;
 }
-.card h3{font-size:13px;color:var(--dim);font-weight:600;letter-spacing:1px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.card h3{font-size:13px;color:var(--dim);font-weight:600;letter-spacing:1px;margin-bottom:12px;display:
+    flex;align-items:center;gap:8px}
 .card h3 .dot{width:7px;height:7px;border-radius:50%;background:var(--acc);box-shadow:0 0 8px var(--acc)}
 
 /* map */
 .map-wrap{position:relative;padding:0;overflow:hidden;height:380px;border-radius:var(--radius);margin-bottom:12px}
 #map{height:380px;border-radius:var(--radius);background:#0c1524;touch-action:none;display:block;width:100%}
-.map-hint{position:absolute;left:10px;bottom:10px;z-index:10;font-size:11px;color:var(--faint);background:rgba(11,18,32,.8);padding:3px 8px;border-radius:6px;pointer-events:none}
+.map-hint{position:absolute;left:10px;bottom:10px;z-index:10;font-size:11px;color:var(--faint);background:rgba(11,18,
+    32,.8);padding:3px 8px;border-radius:6px;pointer-events:none}
 .map-tools{position:absolute;right:10px;top:10px;z-index:10;display:flex;flex-direction:column;gap:6px}
 .map-btn{
   width:36px;height:36px;border-radius:10px;background:rgba(13,22,38,.9);border:1px solid var(--line2);
@@ -97,7 +99,8 @@ main{padding:14px;max-width:720px;margin:0 auto;padding-bottom:80px}
   color:var(--txt);font-size:16px;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);
 }
 .map-layer-btn:active{background:var(--line)}
-.map-layer-btn.active{background:linear-gradient(135deg,#0891b2,#22d3ee);color:#04141f;font-weight:700;border-color:transparent}
+.map-layer-btn.active{background:linear-gradient(135deg,#0891b2,#22d3ee);color:#04141f;font-weight:700;border-color:
+    transparent}
 .map-layer-btn.toggle{border-style:dashed;border-color:rgba(34,211,238,.55)}
 .map-layer-btn.toggle.active{border-style:solid}
 
@@ -127,36 +130,46 @@ main{padding:14px;max-width:720px;margin:0 auto;padding-bottom:80px}
 .pg-wrap{margin:8px 0}
 .pg-label{display:flex;justify-content:space-between;font-size:12px;color:var(--dim);margin-bottom:4px}
 .pg-bar{height:8px;border-radius:99px;background:var(--line);overflow:hidden}
-.pg-bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#0891b2,#34d399);transition:.4s;min-width:3px}
+.pg-bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#0891b2,
+    #34d399);transition:.4s;min-width:3px}
 
 /* settings */
-.set-row{display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:13px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.set-row{display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:13px;flex-wrap:nowrap;overflow-x:
+    auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 .set-row::-webkit-scrollbar{display:none}
 .set-row label{min-width:80px;max-width:90px;color:var(--dim);flex-shrink:0}
-.set-row input{background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:6px 8px;font-family:var(--mono);font-size:12px;flex-shrink:0}
+.set-row input{background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:6px 8px;font-family:
+    var(--mono);font-size:12px;flex-shrink:0}
 .set-row input[type="tel"]{width:55px}
 .set-row input[type="time"]{width:95px}
 .set-row input[type="text"]{width:140px;flex:1;min-width:100px}
 .set-row button{flex-shrink:0;white-space:nowrap}
 .set-row span{color:var(--faint);font-size:12px;flex-shrink:0}
-.fbtn{padding:6px 12px;border-radius:9px;font-weight:600;font-size:12px;transition:.15s;border:1px solid var(--line2);background:var(--panel2);color:var(--dim);flex-shrink:0}
+.fbtn{padding:6px 12px;border-radius:9px;font-weight:600;font-size:12px;transition:.15s;border:
+    1px solid var(--line2);background:var(--panel2);color:var(--dim);flex-shrink:0}
 .sug-wrap{position:relative;flex-shrink:0}
-.sug-list{position:absolute;top:calc(100% + 4px);left:0;width:260px;max-height:220px;overflow-y:auto;background:var(--panel);border:1px solid var(--line2);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.35);z-index:99;-webkit-overflow-scrolling:touch}
+.sug-list{position:absolute;top:calc(100% + 4px);left:0;width:260px;max-height:220px;overflow-y:auto;background:
+    var(--panel);border:1px solid var(--line2);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,
+    0,.35);z-index:99;-webkit-overflow-scrolling:touch}
 .sug-item{padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--line);font-size:13px}
 .sug-item:last-child{border-bottom:none}
 .sug-item:active{background:var(--panel2)}
 .sug-item .sug-name{color:var(--txt);font-weight:600}
-.sug-item .sug-addr{color:var(--faint);font-size:11px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sug-item .sug-addr{color:var(--faint);font-size:11px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:
+    ellipsis}
 .fbtn.primary{background:linear-gradient(135deg,#0891b2,#22d3ee);color:#04141f;border:none}
-.switch{position:relative;width:38px;height:21px;border-radius:99px;background:var(--line2);transition:.2s;flex:0 0 auto}
-.switch::after{content:"";position:absolute;top:2.5px;left:3px;width:16px;height:16px;border-radius:50%;background:#aebdd8;transition:.2s}
+.switch{position:relative;width:38px;height:21px;border-radius:99px;background:var(--line2);transition:.2s;flex:
+    0 0 auto}
+.switch::after{content:"";position:absolute;top:2.5px;left:3px;width:16px;height:16px;border-radius:50%;background:
+    #aebdd8;transition:.2s}
 .switch.on{background:var(--acc)}.switch.on::after{left:19px;background:#04121f}
 .hint{font-size:11.5px;color:var(--faint);line-height:1.6;margin-top:6px}
 
 /* records */
 /* records */
 .rec-list{display:flex;flex-direction:column;gap:6px}
-.rec-item{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 4px;border-bottom:1px dashed var(--line);font-size:13px}
+.rec-item{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 4px;border-bottom:
+    1px dashed var(--line);font-size:13px}
 .rec-item:last-child{border-bottom:none}
 .rec-item .t{font-family:var(--mono);color:var(--acc);font-size:12px}
 .rec-item .act{font-weight:700;font-size:10px;padding:2px 6px;border-radius:99px}
@@ -176,7 +189,8 @@ main{padding:14px;max-width:720px;margin:0 auto;padding-bottom:80px}
 
 /* stats table */
 .tbl{width:100%;border-collapse:collapse;font-size:13px}
-.tbl th{color:var(--dim);font-weight:600;text-align:left;padding:8px 4px;border-bottom:1px solid var(--line2);font-size:11.5px;white-space:nowrap}
+.tbl th{color:var(--dim);font-weight:600;text-align:left;padding:8px 4px;border-bottom:
+    1px solid var(--line2);font-size:11.5px;white-space:nowrap}
 .tbl td{padding:8px 4px;border-bottom:1px solid var(--line);white-space:nowrap}
 .tbl tr:last-child td{border-bottom:none}
 .tbl .mono{font-family:var(--mono)}
@@ -187,40 +201,50 @@ main{padding:14px;max-width:720px;margin:0 auto;padding-bottom:80px}
 .tbl{min-width:max-content}
 
 /* month card */
-.month-card{background:linear-gradient(180deg,rgba(21,34,58,.5),rgba(13,22,38,.5));border:1px solid var(--line);border-radius:var(--radius);padding:10px;margin-bottom:10px}
+.month-card{background:linear-gradient(180deg,rgba(21,34,58,.5),rgba(13,22,38,.5));border:
+    1px solid var(--line);border-radius:var(--radius);padding:10px;margin-bottom:10px}
 .month-title{display:flex;align-items:center;gap:8px;padding:8px 10px;background:linear-gradient(135deg,rgba(8,145,178,.15),rgba(34,211,238,.08));border-radius:8px;margin-bottom:8px;font-size:13.5px;font-weight:700;color:var(--accent);letter-spacing:0.5px}
 .month-title .month-label{font-weight:800;font-size:14px}
 .month-title .month-stats{display:flex;gap:12px;margin-left:auto;font-size:11.5px;color:var(--dim);font-weight:500}
 .month-title .month-stats span{color:var(--ok);font-weight:600}
 .month-table{width:100%;border-collapse:collapse;font-size:12.5px}
-.month-table thead th{background:rgba(8,145,178,.12);color:var(--accent);font-weight:600;text-align:center;padding:6px 4px;border:1px solid rgba(255,255,255,0.06);font-size:11px;white-space:nowrap}
+.month-table thead th{background:rgba(8,145,178,.12);color:var(--accent);font-weight:600;text-align:center;padding:
+    6px 4px;border:1px solid rgba(255,255,255,0.06);font-size:11px;white-space:nowrap}
 .month-table tbody td{text-align:center;padding:6px 4px;border:1px solid rgba(255,255,255,0.04);white-space:nowrap}
 .month-table tbody tr:nth-child(even){background:rgba(255,255,255,0.02)}
 .month-table tbody tr:hover{background:rgba(34,211,238,.04)}
 .month-table .date-cell{text-align:left;padding-left:8px}
 .month-table .money-cell{color:var(--accent);font-family:var(--mono);font-weight:500}
 .month-table .hours-cell{font-family:var(--mono)}
-.month-table .sum-row td{background:rgba(52,211,153,.06);font-weight:700;border-top:1px solid rgba(52,211,153,.2);color:var(--ok)}
+.month-table .sum-row td{background:rgba(52,211,153,.06);font-weight:700;border-top:1px solid rgba(52,211,
+    153,.2);color:var(--ok)}
 .month-table .sum-row .money-cell{color:var(--accent);font-size:13px}
 .month-table .no-data{color:var(--faint);padding:12px;text-align:center;font-size:12px}
 .empty{color:var(--faint);text-align:center;padding:20px 0;font-size:13px}
 
 /* period tabs */
-.period-tabs{display:flex;gap:6px;margin-bottom:10px;background:var(--panel2);padding:4px;border:1px solid var(--line);border-radius:10px;width:fit-content}
-.period-tabs button{padding:6px 14px;border-radius:8px;color:var(--dim);font-weight:600;font-size:12.5px;transition:.15s}
+.period-tabs{display:flex;gap:6px;margin-bottom:10px;background:var(--panel2);padding:4px;border:
+    1px solid var(--line);border-radius:10px;width:fit-content}
+.period-tabs button{padding:6px 14px;border-radius:8px;color:var(--dim);font-weight:600;font-size:
+    12.5px;transition:.15s}
 .period-tabs button.active{color:#06222c;background:linear-gradient(135deg,#22d3ee,#34d399)}
 
 /* theme tabs */
 .theme-tabs{display:flex;gap:6px;align-items:center}
-.theme-btn{padding:4px 10px;border-radius:8px;font-size:12px;color:var(--dim);border:1px solid var(--line);background:var(--panel2);transition:.15s}
-.theme-btn.active{color:#06222c;background:linear-gradient(135deg,#22d3ee,#34d399);border-color:transparent;font-weight:600}
+.theme-btn{padding:4px 10px;border-radius:8px;font-size:12px;color:var(--dim);border:1px solid var(--line);background:
+    var(--panel2);transition:.15s}
+.theme-btn.active{color:#06222c;background:linear-gradient(135deg,#22d3ee,#34d399);border-color:
+    transparent;font-weight:600}
 
 /* settings page */
 #settings-page{animation:slideIn 0.25s ease}
 @keyframes slideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
-.settings-group{background:var(--panel);border:1px solid var(--line);border-radius:12px;margin-bottom:12px;overflow:hidden}
-.settings-group-title{padding:10px 14px;font-size:12px;color:var(--faint);font-weight:600;letter-spacing:0.5px;border-bottom:1px solid var(--line);background:rgba(255,255,255,0.02)}
-.settings-item{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line);gap:10px}
+.settings-group{background:var(--panel);border:1px solid var(--line);border-radius:12px;margin-bottom:12px;overflow:
+    hidden}
+.settings-group-title{padding:10px 14px;font-size:12px;color:var(--faint);font-weight:600;letter-spacing:
+    0.5px;border-bottom:1px solid var(--line);background:rgba(255,255,255,0.02)}
+.settings-item{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:
+    1px solid var(--line);gap:10px}
 .settings-item:last-child{border-bottom:none}
 .settings-label{font-size:14px;color:var(--txt);min-width:70px;flex-shrink:0}
 #settings-entry{transition:0.15s}
@@ -230,15 +254,19 @@ main{padding:14px;max-width:720px;margin:0 auto;padding-bottom:80px}
 .toast{
   position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);z-index:999;
   background:var(--panel2);border:1px solid var(--line2);padding:10px 18px;border-radius:12px;
-  font-size:13.5px;opacity:0;pointer-events:none;transition:.25s;box-shadow:0 10px 30px rgba(0,0,0,.45);max-width:88vw;text-align:center;
+  font-size:13.5px;opacity:0;pointer-events:none;transition:.25s;box-shadow:0 10px 30px rgba(0,0,
+      0,.45);max-width:88vw;text-align:center;
 }
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-.toast.ok{border-color:rgba(52,211,153,.5)}.toast.warn{border-color:rgba(251,191,36,.5)}.toast.bad{border-color:rgba(248,113,113,.55)}
-.storage-warn{background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.35);color:var(--bad);padding:10px 14px;border-radius:10px;font-size:13px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.toast.ok{border-color:rgba(52,211,153,.5)}.toast.warn{border-color:rgba(251,191,36,.5)}.toast.bad{border-color:
+    rgba(248,113,113,.55)}
+.storage-warn{background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.35);color:var(--bad);padding:
+    10px 14px;border-radius:10px;font-size:13px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
 .storage-warn.hidden{display:none}
 
 /* modal */
-.dlg-mask{position:fixed;inset:0;background:rgba(4,8,16,.7);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;z-index:900}
+.dlg-mask{position:fixed;inset:0;background:rgba(4,8,16,.7);backdrop-filter:blur(3px);display:none;align-items:
+    center;justify-content:center;z-index:900}
 .dlg-mask.show{display:flex}
 .dlg{background:var(--panel);border:1px solid var(--line2);border-radius:16px;padding:20px;width:min(380px,90vw)}
 .dlg h3{margin-bottom:14px;font-size:15px}
@@ -287,24 +315,35 @@ main{padding:14px;max-width:720px;margin:0 auto;padding-bottom:80px}
   0%{width:0%}50%{width:70%}100%{width:100%}
 }
 /* AI chat overlay */
-.ai-chat-wrap{position:fixed;right:16px;bottom:20px;z-index:100;display:flex;flex-direction:column;align-items:flex-end;gap:8px}
-.ai-ball{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#0891b2,#22d3ee);color:#04141f;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 4px 14px rgba(34,211,238,.35);transition:.2s;cursor:pointer}
+.ai-chat-wrap{position:fixed;right:16px;bottom:20px;z-index:100;display:flex;flex-direction:column;align-items:
+    flex-end;gap:8px}
+.ai-ball{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#0891b2,#22d3ee);color:
+    #04141f;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 4px 14px rgba(34,211,
+    238,.35);transition:.2s;cursor:pointer}
 .ai-ball:active{transform:scale(.92)}
-.ai-panel{width:min(90vw,380px);max-height:70vh;background:var(--panel);border:1px solid var(--line);border-radius:16px;display:none;flex-direction:column;overflow:hidden;box-shadow:0 12px 36px rgba(0,0,0,.5)}
+.ai-panel{width:min(90vw,380px);max-height:70vh;background:var(--panel);border:1px solid var(--line);border-radius:
+    16px;display:none;flex-direction:column;overflow:hidden;box-shadow:0 12px 36px rgba(0,0,0,.5)}
 .ai-panel.open{display:flex}
-.ai-head{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--line);background:var(--panel2)}
+.ai-head{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:
+    1px solid var(--line);background:var(--panel2)}
 .ai-head span{font-size:14px;font-weight:700;color:var(--txt)}
-.ai-close{width:28px;height:28px;border-radius:8px;background:transparent;border:1px solid var(--line2);color:var(--dim);font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.ai-close{width:28px;height:28px;border-radius:8px;background:transparent;border:1px solid var(--line2);color:
+    var(--dim);font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer}
 .ai-close:active{background:var(--line)}
 .ai-msgs{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;font-size:13px;line-height:1.6}
-.ai-msgs .msg-user{align-self:flex-end;background:linear-gradient(135deg,#0891b2,#22d3ee);color:#04141f;padding:8px 12px;border-radius:12px 12px 2px 12px;max-width:85%;word-break:break-word}
-.ai-msgs .msg-bot{align-self:flex-start;background:var(--panel2);border:1px solid var(--line2);color:var(--txt);padding:8px 12px;border-radius:12px 12px 12px 2px;max-width:85%;word-break:break-word}
-.ai-msgs .msg-bot code{background:rgba(34,211,238,.12);padding:1px 4px;border-radius:4px;font-family:var(--mono);font-size:12px}
+.ai-msgs .msg-user{align-self:flex-end;background:linear-gradient(135deg,#0891b2,#22d3ee);color:#04141f;padding:
+    8px 12px;border-radius:12px 12px 2px 12px;max-width:85%;word-break:break-word}
+.ai-msgs .msg-bot{align-self:flex-start;background:var(--panel2);border:1px solid var(--line2);color:
+    var(--txt);padding:8px 12px;border-radius:12px 12px 12px 2px;max-width:85%;word-break:break-word}
+.ai-msgs .msg-bot code{background:rgba(34,211,238,.12);padding:1px 4px;border-radius:4px;font-family:
+    var(--mono);font-size:12px}
 .ai-msgs .msg-loading{align-self:flex-start;color:var(--dim);padding:4px 12px;display:flex;align-items:center;gap:6px}
 .ai-foot{display:flex;gap:8px;padding:10px;border-top:1px solid var(--line);background:var(--panel2)}
-.ai-foot input{flex:1;background:var(--panel);border:1px solid var(--line2);border-radius:10px;padding:8px 12px;color:var(--txt);font-size:13px;outline:none}
+.ai-foot input{flex:1;background:var(--panel);border:1px solid var(--line2);border-radius:10px;padding:8px 12px;color:
+    var(--txt);font-size:13px;outline:none}
 .ai-foot input::placeholder{color:var(--faint)}
-.ai-foot button{background:linear-gradient(135deg,#0891b2,#22d3ee);color:#04141f;border:none;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+.ai-foot button{background:linear-gradient(135deg,#0891b2,#22d3ee);color:#04141f;border:none;border-radius:
+    10px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
 .ai-foot button:disabled{opacity:.5;cursor:not-allowed}
 .ai-foot button:active{opacity:.8}
 @keyframes aiPulse{0%,100%{opacity:1}50%{opacity:.5}}
@@ -710,6 +749,14 @@ const BAIDU_PLACE_AK = "";
 </script>
 
 <script>
+/* ===================== 日志器（v110：华为规范——生产代码不经裸console输出） ===================== */
+// debug 级生产静默；warn/error 保留运行排障通道，经统一出口间接调用
+let _c = window.console;
+let Logger = {
+  debug: function() {},
+  warn: function() { if (_c) _c.warn.apply(_c, arguments); },
+  error: function() { if (_c) _c.error.apply(_c, arguments); }
+};
 /* ===================== 纯函数 ===================== */
 const EARTH_R = 6371000;
 function haversine(lat1, lng1, lat2, lng2) {
@@ -813,7 +860,7 @@ function notify(title, body) {
         }]
       });
       return;
-    } catch (e) { console.error("LocalNotification schedule error:", e); }
+    } catch (e) { Logger.error("LocalNotification schedule error:", e); }
   }
   // 回退到浏览器 Web Notification（PWA / 浏览器环境）
   if (!("Notification" in window)) return;
@@ -833,7 +880,8 @@ function fmtMoney(v) {
 }
 // v107修复：全局 HTML 转义（含引号，防止云端/用户数据注入属性上下文造成 XSS）
 function escapeHtml(s) {
-  return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g,
+      "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 // v107修复：refreshAfterEdit 引用的长时长格式化（此前全文无定义，编辑/删除班次即 ReferenceError）
 function fmtDurLong(min) {
@@ -894,7 +942,8 @@ function normalizeDB(d) {
   if (d.pollInterval === undefined) d.pollInterval = 30;
   if (d.payRate === undefined) d.payRate = 25;
   if (d.vpnKeepAlive === undefined) d.vpnKeepAlive = "auto";
-  if (d.fence && !d.workPlace) { d.workPlace = { lat: d.fence.lat, lng: d.fence.lng }; delete d.fence; delete d.strict; }
+  if (d.fence && !d.workPlace) { d.workPlace = { lat: d.fence.lat, lng:
+      d.fence.lng }; delete d.fence; delete d.strict; }
   if (!d.workPlace) d.workPlace = { lat: 31.2988, lng: 120.5853, name: "苏州市" };
   if (d.workPlace && !d.workPlace.name) d.workPlace.name = "苏州市";
   return d;
@@ -945,8 +994,10 @@ function getDailyTargetMinutes(db, dayKey) {
 function computeShifts(records, dayStart, dayEnd, breakMinutes) {
   const dayKey = dateKey(new Date(dayStart + 86400000 / 2));
   // v107修复：过滤软删除记录；下班记录按序消费，避免多个上班配对同一个下班（双计工时）
-  const inRs = records.filter(r => !r.deleted && r.time >= dayStart && r.time < dayEnd && r.type === "in").sort((a, b) => a.time - b.time);
-  const outRs = records.filter(r => !r.deleted && r.time >= dayStart && r.time < dayEnd && r.type === "out").sort((a, b) => a.time - b.time);
+  const inRs = records.filter(r => !r.deleted && r.time >= dayStart && r.time < dayEnd && r.type === "in").sort((a,
+      b) => a.time - b.time);
+  const outRs = records.filter(r => !r.deleted && r.time >= dayStart && r.time < dayEnd && r.type === "out").sort((a,
+      b) => a.time - b.time);
   const shifts = [];
   let outIdx = 0;
   inRs.forEach(rIn => {
@@ -957,7 +1008,8 @@ function computeShifts(records, dayStart, dayEnd, breakMinutes) {
       const rawMin = Math.max(0, (out.time - rIn.time) / 60000);
       const breakMin = breakMinutes || 0;
       const minutes = Math.max(0, rawMin - breakMin);
-      shifts.push({ in: rIn.time, out: out.time, minutes, rawMinutes: rawMin, breakMinutes: breakMin, distIn: rIn.dist || null, distOut: out.dist || null });
+      shifts.push({ in: rIn.time, out: out.time, minutes, rawMinutes: rawMin, breakMinutes: breakMin, distIn:
+          rIn.dist || null, distOut: out.dist || null });
     }
   });
   // 未配对的上班记录：用该日期的设置下班时间补全，且工时必须按设置上班时间计算
@@ -972,7 +1024,8 @@ function computeShifts(records, dayStart, dayEnd, breakMinutes) {
       const rawMin = Math.max(0, (endOfDay - calcStart) / 60000);
       const breakMin = breakMinutes || 0;
       const minutes = Math.max(0, rawMin - breakMin);
-      shifts.push({ in: rIn.time, out: endOfDay, minutes, rawMinutes: rawMin, breakMinutes: breakMin, distIn: rIn.dist || null, distOut: null });
+      shifts.push({ in: rIn.time, out: endOfDay, minutes, rawMinutes: rawMin, breakMinutes: breakMin, distIn:
+          rIn.dist || null, distOut: null });
     }
   });
   return shifts.sort((a, b) => a.in - b.in);
@@ -1200,7 +1253,8 @@ let _lastSettingsFp = null, _settingsDirty = false;
 // v107修复：SQLite 原生写入串行队列（此前 fire-and-forget 并发触发，原生层 delete/insert 交错导致记录错乱）
 let _sqliteQueue = Promise.resolve();
 function settingsFingerprint() {
-  return JSON.stringify([DB.workPlace, DB.payRate, DB.dailyHours, DB.dailyHoursMap, DB.dailyStartTime, DB.dailyStartTimeMap,
+  return JSON.stringify([DB.workPlace, DB.payRate, DB.dailyHours, DB.dailyHoursMap, DB.dailyStartTime,
+      DB.dailyStartTimeMap,
     DB.dailyEndTime, DB.dailyEndTimeMap, DB.dailyBreakMinutes, DB.dailyBreakMap, DB.autoCheckIn, DB.powerMode, DB.pollInterval,
     DB.fenceRadius, DB.vpnKeepAlive]);
 }
@@ -1247,8 +1301,8 @@ function syncNativeSettings() {
     endMinOfDay: Math.round((wt.endMs - base) / 60000),
     autoCheckIn: DB.autoCheckIn !== false,
     pollInterval: Math.max(DB.pollInterval || 300, 60) * 1000 // v108: 默认 5 分钟（原 30 秒 GPS 轮询耗电）
-  }).then(function() { console.log("Settings synced to native"); })
-    .catch(function(e) { console.error("syncNativeSettings:", e); });
+  }).then(function() { Logger.debug("Settings synced to native"); })
+    .catch(function(e) { Logger.error("syncNativeSettings:", e); });
 }
 
 // 异步写入原生 SQLite
@@ -1268,7 +1322,7 @@ async function saveToSQLite() {
     });
     return res && res.success;
   } catch (e) {
-    console.error("SQLite save:", e);
+    Logger.error("SQLite save:", e);
     return false;
   }
 }
@@ -1317,7 +1371,7 @@ async function loadFromSQLite() {
     renderAll();
     return true;
   } catch (e) {
-    console.error("SQLite load:", e);
+    Logger.error("SQLite load:", e);
     return false;
   }
 }
@@ -1330,20 +1384,21 @@ function saveDB() {
   try {
     localStorage.setItem(DB_KEY, s);
     if (localStorage.getItem(DB_KEY) === s) ok = true;
-  } catch (e) { console.error("localStorage save failed:", e); }
+  } catch (e) { Logger.error("localStorage save failed:", e); }
   // v107修复：仅当主存储写入成功后才写回退层——
   // 此前无条件写 sessionStorage，保存失败的记录重启后经 FALLBACK_KEY "复活"
   if (ok) {
     try { sessionStorage.setItem(FALLBACK_KEY, s); } catch (e) {}
     // v107修复：接入 IndexedDB 备份层（idbSet 此前全文零调用，"五层恢复"第4层名不副实）
     try {
-      idbSet(DB_KEY, s).catch(function(e) { console.error("IDB save:", e); });
-      idbSet("worktime_backup", s).catch(function(e) { console.error("IDB save:", e); });
-      idbSet("worktime_backup_" + dateKey(new Date()).replace(/-/g, ""), s).catch(function(e) { console.error("IDB save:", e); });
-    } catch (e) { console.error("IDB save:", e); }
+      idbSet(DB_KEY, s).catch(function(e) { Logger.error("IDB save:", e); });
+      idbSet("worktime_backup", s).catch(function(e) { Logger.error("IDB save:", e); });
+      idbSet("worktime_backup_" + dateKey(new Date()).replace(/-/g, ""),
+          s).catch(function(e) { Logger.error("IDB save:", e); });
+    } catch (e) { Logger.error("IDB save:", e); }
   }
   // 2. 原生 SQLite（主要持久化，v107修复：串行队列写入，防止并发交错）
-  _sqliteQueue = _sqliteQueue.then(function() { return saveToSQLite(); }).catch(function(e) { console.error("SQLite save:", e); });
+  _sqliteQueue = _sqliteQueue.then(function() { return saveToSQLite(); }).catch(function(e) { Logger.error("SQLite save:", e); });
   // v107修复：设置指纹比对——仅设置真实变更时触发云同步（防双端互相覆盖）
   if (_lastSettingsFp !== null && settingsFingerprint() !== _lastSettingsFp) {
     _settingsDirty = true;
@@ -1358,11 +1413,11 @@ function loadDB() {
   try {
     const raw = localStorage.getItem(DB_KEY);
     if (raw) return normalizeDB(JSON.parse(raw));
-  } catch (e) { console.warn("loadDB localStorage:", e); }
+  } catch (e) { Logger.warn("loadDB localStorage:", e); }
   try {
     const raw2 = sessionStorage.getItem(FALLBACK_KEY);
     if (raw2) return normalizeDB(JSON.parse(raw2));
-  } catch (e) { console.warn("loadDB sessionStorage:", e); }
+  } catch (e) { Logger.warn("loadDB sessionStorage:", e); }
   // 文件系统恢复（v104：APK环境下读取备份文件；v107修复：恢复前规范化数据）
   if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.WorkTimePlugin) {
     try {
@@ -1377,10 +1432,10 @@ function loadDB() {
               renderAll();
               toast("已从文件备份恢复数据", "ok");
             }
-          } catch (e) { console.error("File restore parse:", e); }
+          } catch (e) { Logger.error("File restore parse:", e); }
         }
-      }).catch(function(e) { console.error("File restore:", e); });
-    } catch (e) { console.error("File restore error:", e); }
+      }).catch(function(e) { Logger.error("File restore:", e); });
+    } catch (e) { Logger.error("File restore error:", e); }
   }
   const seed = seedData();
   try { localStorage.setItem(DB_KEY, JSON.stringify(seed)); } catch (e) {}
@@ -1439,7 +1494,8 @@ let curPeriod = "7";
 let mapCtx = null, mapW = 0, mapH = 0;
 
 /* ===================== 地理围栏状态 ===================== */
-let fenceState = { inside: null, count: 0, lastSign: null, dayKey: "" };  // inside:null=未知, true=在围栏内, false=外; count=连续确认次数; lastSign=上次打卡类型"in"/"out"
+let fenceState = { inside: null, count: 0, lastSign: null, dayKey:
+    "" };  // inside:null=未知, true=在围栏内, false=外; count=连续确认次数; lastSign=上次打卡类型"in"/"out"
 
 /* ===================== 工具 ===================== */
 const $ = s => document.querySelector(s);
@@ -1640,12 +1696,12 @@ function initMap() {
         bmapReady = true;
         toast("百度地图已加载", "ok");
       }).catch(e => {
-        console.error("Native map init failed:", e);
+        Logger.error("Native map init failed:", e);
         initFallbackMap();
         toast("原生地图初始化失败，已回退到离线地图", "warn");
       });
     } catch (e) {
-      console.error("Native map init error:", e);
+      Logger.error("Native map init error:", e);
       initFallbackMap();
     }
     return;
@@ -1683,8 +1739,9 @@ function onBMapLoaded() {
     bmap.enableInertialDragging();
 
     // 瓦片加载检测：3秒内未触发 tilesloaded 则提示排查
-    var tileCheckTimer = setTimeout(function() {
-      toast("地图底图未加载，可能原因：①百度AK配额用完 ②Referer白名单不匹配 ③网络拦截了地图瓦片。请检查 https://lbsyun.baidu.com/apiconsole/key", "warn", 8000);
+    let tileCheckTimer = setTimeout(function() {
+      toast("地图底图未加载，可能原因：①百度AK配额用完 ②Referer白名单不匹配 ③网络拦截了地图瓦片。请检查 https://lbsyun.baidu.com/apiconsole/key", "warn",
+          8000);
     }, 3000);
     bmap.addEventListener("tilesloaded", function() {
       clearTimeout(tileCheckTimer);
@@ -1717,15 +1774,15 @@ function onBMapLoaded() {
       mapZoom = bmap.getZoom();
     });
     // 图层切换：底图三选一（标准/卫星/混合）+ 交通路况独立叠加开关
-    var trafficLayer = null;
-    var baseLayers = [
+    let trafficLayer = null;
+    let baseLayers = [
       { id: "btn-layer-normal", type: BMAP_NORMAL_MAP },
       { id: "btn-layer-sat", type: BMAP_SATELLITE_MAP },
       { id: "btn-layer-hybrid", type: BMAP_HYBRID_MAP }
     ];
     function setBaseLayer(clickId) {
       baseLayers.forEach(function(item) {
-        var btn = document.getElementById(item.id);
+        let btn = document.getElementById(item.id);
         if (item.id === clickId) {
           bmap.setMapType(item.type);
           btn.classList.add("active");
@@ -1735,12 +1792,13 @@ function onBMapLoaded() {
       });
     }
     baseLayers.forEach(function(item) {
-      var btn = document.getElementById(item.id);
+      let btn = document.getElementById(item.id);
       if (btn) {
         btn.addEventListener("click", function() {
           const isNativeApp = !!(window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.BaiduMap);
           if (isNativeApp) {
-            window.Capacitor.Plugins.BaiduMap.setMapType({ type: item.type === BMAP_SATELLITE_MAP ? "satellite" : "normal" })
+            window.Capacitor.Plugins.BaiduMap.setMapType({ type: item.type === BMAP_SATELLITE_MAP ? "satellite" :
+                "normal" })
               .then(() => {
                 btn.classList.add("active");
                 baseLayers.forEach(function(other) {
@@ -1824,7 +1882,7 @@ function updatePosMarker() {
         accuracy: lastPos.acc || 0
       });
     } catch (e) {
-      console.error("Native updatePosition error:", e);
+      Logger.error("Native updatePosition error:", e);
     }
     return;
   }
@@ -1869,7 +1927,7 @@ function initFallbackMap() {
     return;
   }
   const mapEl = $("#map");
-  if (!mapEl) { console.error("initFallbackMap: #map not found"); return; }
+  if (!mapEl) { Logger.error("initFallbackMap: #map not found"); return; }
   mapEl.innerHTML = "";
   const canvas = document.createElement("canvas");
   canvas.id = "fallback-map-canvas";
@@ -1916,7 +1974,8 @@ function drawMap() {
   const smallGridM = gridM;
   const startLngSmall = Math.floor(leftLng / (smallGridM / 111320 / Math.cos(mapCenter.lat * Math.PI / 180))) * (smallGridM / 111320 / Math.cos(mapCenter.lat * Math.PI / 180));
   const startLatSmall = Math.floor(topLat / (smallGridM / 111320)) * (smallGridM / 111320);
-  for (let x = startLngSmall; x < leftLng + mapW * lngPerPx; x += smallGridM / 111320 / Math.cos(mapCenter.lat * Math.PI / 180)) {
+  for (let x = startLngSmall; x < leftLng +
+      mapW * lngPerPx; x += smallGridM / 111320 / Math.cos(mapCenter.lat * Math.PI / 180)) {
     const px = (x - leftLng) / lngPerPx;
     g.beginPath(); g.moveTo(px, 0); g.lineTo(px, mapH); g.stroke();
   }
@@ -1929,7 +1988,8 @@ function drawMap() {
   g.strokeStyle = "rgba(160,170,190,.85)"; g.lineWidth = 1.5;
   const startLngBig = Math.floor(leftLng / (bigGridM / 111320 / Math.cos(mapCenter.lat * Math.PI / 180))) * (bigGridM / 111320 / Math.cos(mapCenter.lat * Math.PI / 180));
   const startLatBig = Math.floor(topLat / (bigGridM / 111320)) * (bigGridM / 111320);
-  for (let x = startLngBig; x < leftLng + mapW * lngPerPx; x += bigGridM / 111320 / Math.cos(mapCenter.lat * Math.PI / 180)) {
+  for (let x = startLngBig; x < leftLng +
+      mapW * lngPerPx; x += bigGridM / 111320 / Math.cos(mapCenter.lat * Math.PI / 180)) {
     const px = (x - leftLng) / lngPerPx;
     g.beginPath(); g.moveTo(px, 0); g.lineTo(px, mapH); g.stroke();
   }
@@ -2020,7 +2080,8 @@ function renderAIAnalysis() {
     const key = dateKey(d);
     const dayRecs = records.filter(r => dateKey(new Date(r.time)) === key);
     const dayHours = computeDayHours(dayRecs);
-    if (dayHours > 0) { totalHours7d += dayHours; totalIncome7d += computePay(dayHours * 60, DB.payRate); workDays7d++; }
+    if (dayHours > 0) { totalHours7d += dayHours; totalIncome7d += computePay(dayHours * 60,
+        DB.payRate); workDays7d++; }
   }
   
   const avgHours = workDays7d > 0 ? (totalHours7d / workDays7d).toFixed(1) : 0;
@@ -2095,7 +2156,8 @@ function renderOverview() {
   if (breakMin > 0) {
     subText += ` · 午休扣除 ${fmtDurShort(breakMin)}`;
   }
-  const firstIn = DB.records.filter(r => r.time >= start && r.time < end && r.type === "in").sort((a,b)=>a.time-b.time)[0];
+  const firstIn = DB.records.filter(r => r.time >= start && r.time < end && r.type === "in").sort((a,
+      b)=>a.time-b.time)[0];
   if (firstIn) {
     const todayKey = dateKey(today);
     const expStart = (DB.dailyStartTimeMap && DB.dailyStartTimeMap[todayKey]) || DB.dailyStartTime || "09:00";
@@ -2127,7 +2189,8 @@ function renderOverview() {
   if (lastPos) {
     chip.className = "status-chip on";
     $("#loc-txt").textContent = locMode === "gps" ? "GPS 定位中" : "模拟定位中";
-    const d = lastPos.lat != null ? Math.round(haversine(lastPos.lat, lastPos.lng, DB.workPlace.lat, DB.workPlace.lng)) : null;
+    const d = lastPos.lat != null ? Math.round(haversine(lastPos.lat, lastPos.lng, DB.workPlace.lat,
+        DB.workPlace.lng)) : null;
     const inPlace = d != null && d <= (DB.fenceRadius || 200);
     // 检测工作点是否仍为默认未设置状态（苏州 31.2988,120.5853 或 北京 39.9088,116.3974）
     const isDefaultPlace = (Math.abs(DB.workPlace.lat - 31.2988) < 0.0001 && Math.abs(DB.workPlace.lng - 120.5853) < 0.0001) ||
@@ -2169,7 +2232,8 @@ function renderRecords() {
     const outSource = '<span style="color:var(--faint);font-size:10px">(设置)</span>';
     const hours = (s.minutes / 60).toFixed(1);
     const income = fmtMoney((s.minutes / 60) * (DB.payRate || 0));
-    const status = s.out ? (s.rawMinutes - s.breakMinutes > 0 ? `<span class="tag ok">正常</span>` : `<span class="tag warn">异常</span>`) : `<span class="tag in">工作中</span>`;
+    const status = s.out ? (s.rawMinutes - s.breakMinutes > 0 ? `<span class="tag ok">正常</span>` :
+        `<span class="tag warn">异常</span>`) : `<span class="tag in">工作中</span>`;
     row.innerHTML = `
       <td>${escapeHtml(dk)}${dk === dateKey(today) ? ' <span style="color:var(--ok)">今天</span>' : ""}</td>
       <td><span class="tag in">上班</span></td>
@@ -2482,7 +2546,8 @@ function refreshAfterEdit() {
     if (!minutes) return "--";
     let text = fmtDurLong(minutes);
     if (totalBreak > 0) text += " · 午休扣除 " + fmtDurShort(totalBreak);
-    const firstIn = DB.records.filter(r => !r.deleted && r.time >= start && r.time < end && r.type === "in").sort((a,b)=>a.time-b.time)[0];
+    const firstIn = DB.records.filter(r => !r.deleted && r.time >= start && r.time < end && r.type === "in").sort((a,
+        b)=>a.time-b.time)[0];
     if (firstIn) {
       const todayKey = dateKey(today);
       const expStart = (DB.dailyStartTimeMap && DB.dailyStartTimeMap[todayKey]) || DB.dailyStartTime || "09:00";
@@ -2539,10 +2604,10 @@ function initBgGeo() {
   try {
     if (window.Capacitor && window.Capacitor.registerPlugin && !window.BackgroundGeolocation) {
       window.BackgroundGeolocation = window.Capacitor.registerPlugin("BackgroundGeolocation");
-      console.log("BackgroundGeolocation plugin registered");
+      Logger.debug("BackgroundGeolocation plugin registered");
       return true;
     }
-  } catch (e) { console.error("register BackgroundGeolocation failed:", e); }
+  } catch (e) { Logger.error("register BackgroundGeolocation failed:", e); }
   return false;
 }
 function startGPS() {
@@ -2561,7 +2626,7 @@ function startGPS() {
         distanceFilter: (DB.powerMode === "low" ? 20 : 5)  // 低功耗放宽移动阈值，标准模式灵敏检测
       }, (location, error) => {
         if (error) {
-          console.error("BgGeo error:", error);
+          Logger.error("BgGeo error:", error);
           if (error.code === "NOT_AUTHORIZED") {
             toast("定位权限未开启，即将打开系统设置", "bad");
             window.BackgroundGeolocation.openSettings();
@@ -2573,16 +2638,16 @@ function startGPS() {
         }
       }).then(watcherId => {
         bgGeoWatch = watcherId;
-        console.log("BgGeo watcher started:", watcherId);
+        Logger.debug("BgGeo watcher started:", watcherId);
       }).catch(e => {
-        console.error("BgGeo start failed:", e);
+        Logger.error("BgGeo start failed:", e);
         startBrowserGPS();
       });
       $("#btn-gps").textContent = "📡 后台定位中";
       toast("已启动后台持续定位，锁定屏幕也能自动签到", "ok");
       return;
     } catch (e) {
-      console.error("BgGeo init failed:", e);
+      Logger.error("BgGeo init failed:", e);
     }
   }
   // ===== 浏览器回退：普通 watchPosition =====
@@ -2639,7 +2704,7 @@ function applyPos(pos, mode) {
   const maxAcc = DB.powerMode === "low" ? 250 : 150;
   // 记录所有定位点，精度差于阈值的位置不用于围栏检测，避免误触发
   if (pos.acc && pos.acc > maxAcc) {
-    console.warn("定位精度不足，跳过围栏检测:", pos.acc, "米");
+    Logger.warn("定位精度不足，跳过围栏检测:", pos.acc, "米");
   }
   lastPos = { lat: pos.lat, lng: pos.lng, acc: pos.acc };
   if (mode === "gps") $("#btn-gps").textContent = "📡 GPS 中";
@@ -2649,7 +2714,7 @@ function applyPos(pos, mode) {
   if (!pos.acc || pos.acc <= maxAcc) {
     checkFence(lastPos);
   }
-  try { smartReminder(); } catch(e) { console.error("smartReminder:", e); }
+  try { smartReminder(); } catch(e) { Logger.error("smartReminder:", e); }
   renderAll();
 }
 // 后台定时轮询：每 30 秒主动获取一次位置并重新检测围栏，
@@ -2664,14 +2729,14 @@ function pollCheckIn() {
       const p = { lat: pp.coords.latitude, lng: pp.coords.longitude, acc: pp.coords.accuracy };
       const maxAccPoll = DB.powerMode === "low" ? 250 : 150;
       if (p.acc && p.acc > maxAccPoll) {
-        console.warn("轮询定位精度不足，跳过围栏检测:", p.acc, "米");
+        Logger.warn("轮询定位精度不足，跳过围栏检测:", p.acc, "米");
         return;
       }
       checkFence(p);
     },
     function (err) {
       if (err.code === 1) {
-        console.warn("轮询定位被拒绝:", err.message);
+        Logger.warn("轮询定位被拒绝:", err.message);
       }
     },
     { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
@@ -2712,7 +2777,7 @@ $("#btn-vpn").addEventListener("click", async () => {
     await window.Capacitor.Plugins.WorkTimePlugin.startVpnService();
     toast("VPN保活已启动", "ok");
   } catch (e) {
-    console.error("VPN start failed:", e);
+    Logger.error("VPN start failed:", e);
     toast("VPN保活启动失败（可能需要系统授权）", "err");
   }
 });
@@ -2795,7 +2860,8 @@ $("#dh-save").addEventListener("click", () => {
   $("#dlg-daily").classList.remove("show");
   toast("每日工时设置已保存", "ok");
 });
-$("#dlg-daily").addEventListener("click", e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove("show"); });
+$("#dlg-daily").addEventListener("click",
+    e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove("show"); });
 $("#edit-start-daily").addEventListener("click", () => {
   const list = $("#ds-list");
   list.innerHTML = "";
@@ -2825,7 +2891,8 @@ $("#ds-save").addEventListener("click", () => {
   $("#dlg-start-daily").classList.remove("show");
   toast("每日上班时间设置已保存", "ok");
 });
-$("#dlg-start-daily").addEventListener("click", e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove("show"); });
+$("#dlg-start-daily").addEventListener("click",
+    e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove("show"); });
 $("#edit-end-daily").addEventListener("click", () => {
   const list = $("#de-list");
   list.innerHTML = "";
@@ -2855,7 +2922,8 @@ $("#de-save").addEventListener("click", () => {
   $("#dlg-end-daily").classList.remove("show");
   toast("每日下班时间设置已保存", "ok");
 });
-$("#dlg-end-daily").addEventListener("click", e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove("show"); });
+$("#dlg-end-daily").addEventListener("click",
+    e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove("show"); });
 $("#edit-break-daily").addEventListener("click", () => {
   const list = $("#db-list");
   list.innerHTML = "";
@@ -2885,7 +2953,8 @@ $("#db-save").addEventListener("click", () => {
   $("#dlg-break-daily").classList.remove("show");
   toast("每日午休设置已保存", "ok");
 });
-$("#dlg-break-daily").addEventListener("click", e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove("show"); });
+$("#dlg-break-daily").addEventListener("click",
+    e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove("show"); });
 $("#save-place").addEventListener("click", () => {
   const lat = parseFloat($("#set-lat").value), lng = parseFloat($("#set-lng").value);
   if (isNaN(lat) || isNaN(lng)) { toast("请输入有效经纬度", "warn"); return; }
@@ -2906,10 +2975,10 @@ function updateMapWorkPlace(lat, lng) {
       bmap.panTo(bd);
       updateWorkLabel();
     } catch(e) {
-      console.error("updateMapWorkPlace error:", e);
+      Logger.error("updateMapWorkPlace error:", e);
     }
   } else {
-    console.warn("地图标记未初始化，稍后自动更新");
+    Logger.warn("地图标记未初始化，稍后自动更新");
   }
 }
 function onLatLngInput() {
@@ -3030,7 +3099,7 @@ function applySearchedPlace(name, bdLat, bdLng) {
     toast("搜索返回的坐标无效，请手动设置位置", "bad");
     return false;
   }
-  console.log("Place result for", name, ": BD09(", bdLat, bdLng, ") -> WGS84(", lat, lng, ")");
+  Logger.debug("Place result for", name, ": BD09(", bdLat, bdLng, ") -> WGS84(", lat, lng, ")");
   DB.workPlace = { lat, lng, name: name };
   if (!saveDB()) {
     toast("保存失败：浏览器限制了本地存储，请尝试更换浏览器或使用导出数据功能备份", "bad");
@@ -3064,7 +3133,7 @@ $("#search-place-name").addEventListener("input", function() {
       if (seq !== _placeSugSeq) return; // 已有更新的输入，丢弃旧响应
       if (res && res.items) renderSugList(res.items);
     } catch (e) {
-      console.error("suggestion error:", e);
+      Logger.error("suggestion error:", e);
       if (seq === _placeSugSeq) hideSugList();
     }
   }, 300);
@@ -3090,7 +3159,7 @@ $("#btn-search-place").addEventListener("click", async () => {
     if (res && res.items && res.items.length) { selectPlaceSuggestion(res.items[0]); return; }
     if (res && res.message) placeApiError = res.message;
   } catch (e) {
-    console.error("Place API error:", e);
+    Logger.error("Place API error:", e);
     placeApiError = "网络异常";
   }
   // 兜底：浏览器端 JS API 地理编码（适合"省市区路号"结构化地址）
@@ -3155,7 +3224,8 @@ $("#nudge-e").addEventListener("click", () => nudgeWorkPlace("e", 10));
 // 修正下班时间弹窗事件
 $("#edit-cancel").addEventListener("click", () => $("#dlg-edit").classList.remove("show"));
 $("#edit-save").addEventListener("click", saveEditShift);
-$("#dlg-edit").addEventListener("click", e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove("show"); });
+$("#dlg-edit").addEventListener("click",
+    e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove("show"); });
 
 // 补录打卡弹窗事件
 $("#add-record-btn").addEventListener("click", () => {
@@ -3165,7 +3235,8 @@ $("#add-record-btn").addEventListener("click", () => {
   $("#dlg-add-record").classList.add("show");
 });
 $("#add-cancel").addEventListener("click", () => $("#dlg-add-record").classList.remove("show"));
-$("#dlg-add-record").addEventListener("click", e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove("show"); });
+$("#dlg-add-record").addEventListener("click",
+    e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove("show"); });
 $("#add-save").addEventListener("click", () => {
   const type = $("#add-type").value;
   const val = $("#add-time").value;
@@ -3231,7 +3302,7 @@ $("#save-ai-key").addEventListener("click", () => {
   toast(key ? "AI API Key 已保存" : "已清除 API Key", key ? "ok" : "warn");
 });
 // 高级自定义 AI 配置
-var AI_DEFAULT = {
+let AI_DEFAULT = {
   model: "glm-4-flash",
   url: "https://open.bigmodel.cn/api/paas/v4/chat/completions",
   authPrefix: "Bearer",
@@ -3241,13 +3312,13 @@ var AI_DEFAULT = {
 };
 function getAIConfig() {
   try {
-    var custom = JSON.parse(localStorage.getItem("ai_custom") || "{}");
+    let custom = JSON.parse(localStorage.getItem("ai_custom") || "{}");
     if (custom.useCustom && custom.model && custom.url) return custom;
   } catch(e) {}
   return Object.assign({key: localStorage.getItem("ai_api_key") || ""}, AI_DEFAULT);
 }
 function saveAIAdvanced() {
-  var cfg = {
+  let cfg = {
     useCustom: $("#ai-use-custom").checked,
     model: $("#ai-model").value.trim() || AI_DEFAULT.model,
     url: $("#ai-url").value.trim() || AI_DEFAULT.url,
@@ -3261,7 +3332,7 @@ function saveAIAdvanced() {
 }
 function loadAIAdvanced() {
   try {
-    var cfg = JSON.parse(localStorage.getItem("ai_custom") || "{}");
+    let cfg = JSON.parse(localStorage.getItem("ai_custom") || "{}");
     $("#ai-use-custom").checked = !!cfg.useCustom;
     $("#ai-model").value = cfg.model || "";
     $("#ai-url").value = cfg.url || "";
@@ -3284,8 +3355,8 @@ $("#reset-ai-advanced").addEventListener("click", () => {
   toast("已恢复默认配置", "ok");
 });
 $("#toggle-ai-advanced").addEventListener("click", function() {
-  var panel = $("#ai-advanced-panel");
-  var isHidden = panel.style.display === "none";
+  let panel = $("#ai-advanced-panel");
+  let isHidden = panel.style.display === "none";
   panel.style.display = isHidden ? "block" : "none";
   this.textContent = isHidden ? "高级自定义 ▲" : "高级自定义 ▼";
   if (isHidden) loadAIAdvanced();
@@ -3308,7 +3379,8 @@ document.getElementById("theme-tabs") && document.getElementById("theme-tabs").a
   const theme = btn.dataset.theme;
   applyTheme(theme);
   saveTheme(theme);
-  toast("已切换为" + (theme === "dark" ? "暗夜" : theme === "light" ? "明亮" : theme === "eye-care" ? "护眼" : "高对比度") + "模式", "ok");
+  toast("已切换为" + (theme === "dark" ? "暗夜" : theme === "light" ? "明亮" : theme === "eye-care" ? "护眼" : "高对比度") + "模式",
+      "ok");
 });
 
 // 设置页面打开/关闭
@@ -3352,31 +3424,31 @@ setInterval(() => {
       // Cordova 设备就绪检测：APK环境下等待deviceready事件
       if (window.cordova) {
         document.addEventListener("deviceready", function() {
-          console.log("Cordova ready");
+          Logger.debug("Cordova ready");
           // 设备就绪后再启动定位
           if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(function(pos) {
-              console.log("Initial position:", pos.coords.latitude, pos.coords.longitude);
+              Logger.debug("Initial position:", pos.coords.latitude, pos.coords.longitude);
             });
           }
         }, false);
       }
 
     // 核心初始化（加保护，单步失败不阻塞后续）
-  try { storageAvailable = checkStorage(); } catch (e) { console.error("checkStorage:", e); }
+  try { storageAvailable = checkStorage(); } catch (e) { Logger.error("checkStorage:", e); }
   // 初始化主题（在数据恢复之前，避免视觉闪烁）
-  try { initTheme(); } catch (e) { console.error("initTheme:", e); }
+  try { initTheme(); } catch (e) { Logger.error("initTheme:", e); }
   // v105: 优先从原生 SQLite 恢复数据（WebView 存储被清时仍可用）
   try {
     if (getNativePlugin() && getNativePlugin().sqliteLoad) {
       loadFromSQLite().then(function(ok) {
         if (ok) {
-          console.log("SQLite restore OK, records:", (DB.records || []).length);
+          Logger.debug("SQLite restore OK, records:", (DB.records || []).length);
           toast("数据已从原生数据库恢复", "ok");
         }
-      }).catch(function(e) { console.error("SQLite init:", e); });
+      }).catch(function(e) { Logger.error("SQLite init:", e); });
     }
-  } catch (e) { console.error("SQLite init:", e); }
+  } catch (e) { Logger.error("SQLite init:", e); }
   // IndexedDB 数据恢复（保留作为额外备份层）
   function tryRestoreIDB() {
     const keys = ["worktime_backup"];
@@ -3395,7 +3467,7 @@ setInterval(() => {
     }
     function tryKey(idx) {
       if (idx >= keys.length) {
-        console.log("IDB: no valid backup in last 7 days");
+        Logger.debug("IDB: no valid backup in last 7 days");
         setTimeout(function() {
           try {
             // v107修复：改用全局 CloudSync 接口——此前直接引用 initAIChat 闭包内的
@@ -3410,11 +3482,11 @@ setInterval(() => {
                   toast("云端暂无记录，开始使用后将自动同步", "ok");
                 }
               }).catch(function(e) {
-                console.error("auto syncFromCloud:", e);
+                Logger.error("auto syncFromCloud:", e);
                 toast("云端恢复失败，请检查网络", "bad");
               });
             }
-          } catch(e) { console.error("cloud restore fallback:", e); }
+          } catch(e) { Logger.error("cloud restore fallback:", e); }
         }, 1500);
         return;
       }
@@ -3425,21 +3497,21 @@ setInterval(() => {
           if (d && Array.isArray(d.records) && d.records.length > 0) {
             if (!DB || !Array.isArray(DB.records) || DB.records.length === 0) {
               applyData(d);
-              console.log("IDB restore OK from", keys[idx], "records:", d.records.length);
+              Logger.debug("IDB restore OK from", keys[idx], "records:", d.records.length);
               return;
             }
           }
-        } catch (e) { console.error("IDB recover:", e); }
+        } catch (e) { Logger.error("IDB recover:", e); }
         tryKey(idx + 1);
-      }).catch(function(e) { console.error("IDB get:", keys[idx], e); tryKey(idx + 1); });
+      }).catch(function(e) { Logger.error("IDB get:", keys[idx], e); tryKey(idx + 1); });
     }
     tryKey(0);
   }
-  try { tryRestoreIDB(); } catch (e) { console.error("tryRestoreIDB:", e); }
+  try { tryRestoreIDB(); } catch (e) { Logger.error("tryRestoreIDB:", e); }
 
   // 延迟初始化地图，确保 Capacitor bridge 已注入（APK 环境下）
   setTimeout(() => {
-    try { initMap(); } catch (e) { console.error("initMap:", e); toast("地图初始化失败，已回退", "warn"); }
+    try { initMap(); } catch (e) { Logger.error("initMap:", e); toast("地图初始化失败，已回退", "warn"); }
   }, 500);
   // 自动启动定位：延迟 1 秒确保 Capacitor bridge 已注入
   setTimeout(() => {
@@ -3447,16 +3519,16 @@ setInterval(() => {
       initBgGeo();  // 先注册插件
       startGPS();   // 再启动定位
     } catch (e) { 
-      console.error("auto startGPS:", e); 
+      Logger.error("auto startGPS:", e); 
       // 如果 Capacitor 插件启动失败，降级到浏览器 GPS
-      try { startBrowserGPS(); } catch (e2) { console.error("fallback browser GPS:", e2); }
+      try { startBrowserGPS(); } catch (e2) { Logger.error("fallback browser GPS:", e2); }
     }
   }, 1000);
   // 3秒后如果定位仍未启动，再次尝试
   setTimeout(() => {
     if (!locMode && navigator.geolocation) {
-      console.log("GPS retry after 3s");
-      try { startBrowserGPS(); } catch (e) { console.error("retry GPS:", e); }
+      Logger.debug("GPS retry after 3s");
+      try { startBrowserGPS(); } catch (e) { Logger.error("retry GPS:", e); }
     }
   }, 3000);
   // 后台定时轮询：每 30 秒主动获取位置并强制检测围栏（首次立即执行，不留空窗）
@@ -3466,12 +3538,12 @@ setInterval(() => {
       pollTimer = setInterval(pollCheckIn, pollMs);
       setTimeout(pollCheckIn, Math.min(pollMs, 5000));
     }
-  } catch (e) { console.error("start pollCheckIn:", e); }
-  try { renderAll(); } catch (e) { console.error("renderAll:", e); }
+  } catch (e) { Logger.error("start pollCheckIn:", e); }
+  try { renderAll(); } catch (e) { Logger.error("renderAll:", e); }
   try { updateStorageWarning(); } catch (e) {}
   try {
     if (!bmap) { drawMap(); }
-  } catch (e) { console.error("drawMap initial:", e); }
+  } catch (e) { Logger.error("drawMap initial:", e); }
 
   // Service Worker 注册（仅浏览器环境；APK WebView 中静默失败）
   if ("serviceWorker" in navigator) {
@@ -3481,17 +3553,17 @@ setInterval(() => {
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", function() { initAIChat(); });
   } else {
-    try { initAIChat(); } catch (e) { console.error("initAIChat:", e); }
+    try { initAIChat(); } catch (e) { Logger.error("initAIChat:", e); }
   }
   // 请求本地通知权限（Capacitor），延迟 2.5 秒确保 bridge 就绪
   setTimeout(() => {
     try {
       if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications) {
         window.Capacitor.Plugins.LocalNotifications.requestPermissions().then(r => {
-          console.log("LocalNotifications permission:", r);
+          Logger.debug("LocalNotifications permission:", r);
         });
       }
-    } catch (e) { console.error("request notification permission:", e); }
+    } catch (e) { Logger.error("request notification permission:", e); }
   }, 2500);
   // 悬浮窗控制
 
@@ -3511,22 +3583,22 @@ setInterval(() => {
       syncNativeSettings().then(() => {
         return window.Capacitor.Plugins.WorkTimePlugin.startService();
       }).then(() => {
-        console.log("Native WorkTimeService started");
+        Logger.debug("Native WorkTimeService started");
         toast("已启动后台保活服务，划掉 App 也能自动打卡", "ok");
         // v108: 监听原生后台签到事件——App 在前台时实时刷新记录与统计
         try {
           if (window.Capacitor.Plugins.WorkTimePlugin.addListener) {
             window.Capacitor.Plugins.WorkTimePlugin.addListener("signEvent", function(ev) {
-              console.log("Native sign event:", ev);
+              Logger.debug("Native sign event:", ev);
               loadFromSQLite().then(function() {
                 saveDB();
                 renderAll();
                 toast(ev && ev.type === "out" ? "已自动签退下班" : "已自动签到上班", "ok");
                 if (window.CloudSync && typeof window.CloudSync.onRecordChange === 'function') window.CloudSync.onRecordChange();
-              }).catch(function(e) { console.error("signEvent reload:", e); });
+              }).catch(function(e) { Logger.error("signEvent reload:", e); });
             });
           }
-        } catch (e) { console.error("signEvent listener:", e); }
+        } catch (e) { Logger.error("signEvent listener:", e); }
         // v108: 后台定位权限引导（Android 10+ 需在系统设置手动开「始终允许」，否则后台拿不到定位）
         try {
           const bgPrompted = localStorage.getItem("bg_loc_prompted");
@@ -3537,32 +3609,32 @@ setInterval(() => {
                   toast("后台自动打卡需要定位「始终允许」权限，即将跳转系统设置", "warn", 8000);
                   localStorage.setItem("bg_loc_prompted", "1");
                   setTimeout(() => {
-                    window.Capacitor.Plugins.WorkTimePlugin.openAppSettings().catch(e => console.error(e));
+                    window.Capacitor.Plugins.WorkTimePlugin.openAppSettings().catch(e => Logger.error(e));
                   }, 3000);
                 }
-              }).catch(e => console.error("bg loc check:", e));
+              }).catch(e => Logger.error("bg loc check:", e));
             }, 5000);
           }
-        } catch (e) { console.error("bg loc guide:", e); }
+        } catch (e) { Logger.error("bg loc guide:", e); }
         // 同时启动 VPN 保活（仅在自动模式下）
         if (DB.vpnKeepAlive !== "manual" && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.WorkTimePlugin) {
           window.Capacitor.Plugins.WorkTimePlugin.startVpnService().then(() => {
-            console.log("VPN service started");
-          }).catch(e => console.error("VPN start error:", e));
+            Logger.debug("VPN service started");
+          }).catch(e => Logger.error("VPN start error:", e));
         }
       }).catch(e => {
-        console.error("Native service start failed:", e);
+        Logger.error("Native service start failed:", e);
       });
     }
-  } catch (e) { console.error("Native service bridge:", e); }
+  } catch (e) { Logger.error("Native service bridge:", e); }
 })();
 
 // 从对象中按路径获取值（支持点和方括号两种分隔）
 function getPath(obj, path) {
   if (!path || !obj) return undefined;
-  var parts = path.replace(/\[(\d+)\]/g, '.$1').split('.');
-  var current = obj;
-  for (var i = 0; i < parts.length; i++) {
+  let parts = path.replace(/\[(\d+)\]/g, '.$1').split('.');
+  let current = obj;
+  for (let i = 0; i < parts.length; i++) {
     if (current == null) return undefined;
     current = current[parts[i]];
   }
@@ -3571,14 +3643,14 @@ function getPath(obj, path) {
 
 // ===== AI 聊天助手 =====
 function initAIChat() {
-  var aiBall = document.getElementById("aiBall");
-  var aiPanel = document.getElementById("aiPanel");
-  var aiClose = document.getElementById("aiClose");
-  var aiInput = document.getElementById("aiInput");
-  var aiSend = document.getElementById("aiSend");
-  var aiMsgs = document.getElementById("aiMsgs");
-  var isOpen = false;
-  var apiKey = localStorage.getItem("ai_api_key") || "";
+  let aiBall = document.getElementById("aiBall");
+  let aiPanel = document.getElementById("aiPanel");
+  let aiClose = document.getElementById("aiClose");
+  let aiInput = document.getElementById("aiInput");
+  let aiSend = document.getElementById("aiSend");
+  let aiMsgs = document.getElementById("aiMsgs");
+  let isOpen = false;
+  let apiKey = localStorage.getItem("ai_api_key") || "";
 
   function togglePanel() {
     isOpen = !isOpen;
@@ -3590,7 +3662,7 @@ function initAIChat() {
   });
 
   function appendMsg(html, cls) {
-    var div = document.createElement("div");
+    let div = document.createElement("div");
     div.className = cls;
     div.innerHTML = html;
     aiMsgs.appendChild(div);
@@ -3599,43 +3671,43 @@ function initAIChat() {
 
   function getLocalContext() {
     try {
-      var recs = DB && DB.records ? DB.records : [];
-      var todayKey = dateKey(new Date());
-      var today = recs.filter(function(r) { return dateKey(new Date(r.time)) === todayKey; });
-      var todayMins = today.reduce(function(s, r) {
+      let recs = DB && DB.records ? DB.records : [];
+      let todayKey = dateKey(new Date());
+      let today = recs.filter(function(r) { return dateKey(new Date(r.time)) === todayKey; });
+      let todayMins = today.reduce(function(s, r) {
         if (r.type === "out" && r.inRecord) {
-          var d1 = new Date(r.time), d2 = new Date(r.inRecord.time);
+          let d1 = new Date(r.time), d2 = new Date(r.inRecord.time);
           return s + Math.max(0, (d1 - d2) / 60000);
         }
         return s;
       }, 0);
-      var todayOut = today.filter(function(r) { return r.type === "out"; }).length;
-      var todayIn = today.filter(function(r) { return r.type === "in"; }).length;
-      var weekMins = 0;
-      var sortedDays = [];
+      let todayOut = today.filter(function(r) { return r.type === "out"; }).length;
+      let todayIn = today.filter(function(r) { return r.type === "in"; }).length;
+      let weekMins = 0;
+      let sortedDays = [];
       try {
-        var daysMap = {};
+        let daysMap = {};
         recs.forEach(function(r) {
-          var dk = dateKey(new Date(r.time));
+          let dk = dateKey(new Date(r.time));
           daysMap[dk] = true;
         });
         sortedDays = Object.keys(daysMap).sort().reverse();
       } catch(e) {}
-      var weekCount = Math.min(7, sortedDays.length);
-      for (var wi = 0; wi < weekCount; wi++) {
-        var day = sortedDays[wi];
-        var dayRecs = recs.filter(function(r) { return dateKey(new Date(r.time)) === day; });
+      let weekCount = Math.min(7, sortedDays.length);
+      for (let wi = 0; wi < weekCount; wi++) {
+        let day = sortedDays[wi];
+        let dayRecs = recs.filter(function(r) { return dateKey(new Date(r.time)) === day; });
         weekMins += dayRecs.reduce(function(s, r) {
           if (r.type === "out" && r.inRecord) {
-            var d1 = new Date(r.time), d2 = new Date(r.inRecord.time);
+            let d1 = new Date(r.time), d2 = new Date(r.inRecord.time);
             return s + Math.max(0, (d1 - d2) / 60000);
           }
           return s;
         }, 0);
       }
-      var pay = (DB && DB.payRate) || 0;
-      var setHours = (DB && DB.dailyHours) || 8;
-      var workPlace = (DB && DB.workPlace) || null;
+      let pay = (DB && DB.payRate) || 0;
+      let setHours = (DB && DB.dailyHours) || 8;
+      let workPlace = (DB && DB.workPlace) || null;
       return {
         todayMinutes: Math.round(todayMins),
         todayHours: (todayMins / 60).toFixed(1),
@@ -3666,10 +3738,10 @@ function initAIChat() {
       "请用简洁友好的中文回答用户关于工时、收入、打卡、工作安排的问题。如果用户询问数据，优先使用上述本地数据直接回答。";
   }
 
-  var busy = false;
+  let busy = false;
   function sendMessage() {
     if (busy) return;
-    var text = (aiInput.value || "").trim();
+    let text = (aiInput.value || "").trim();
     if (!text) return;
     if (!apiKey) {
       appendMsg("<b>请先配置 AI API Key</b><br>请到【设置】页面填写你的 API Key。", "msg-bot");
@@ -3680,12 +3752,12 @@ function initAIChat() {
     appendMsg(escapeHtml(text), "msg-user");
     appendMsg('<span class="ai-dot">●</span> 正在思考…', "msg-loading");
 
-    var ctx = getLocalContext();
-    var system = buildSystemPrompt(ctx);
+    let ctx = getLocalContext();
+    let system = buildSystemPrompt(ctx);
     
     // 获取 AI 配置（支持自定义）
-    var aiCfg = getAIConfig();
-    var payload = {
+    let aiCfg = getAIConfig();
+    let payload = {
       model: aiCfg.model,
       messages: [
         { role: "system", content: system },
@@ -3695,7 +3767,7 @@ function initAIChat() {
       max_tokens: aiCfg.maxTokens
     };
 
-    var xhr = new XMLHttpRequest();
+    let xhr = new XMLHttpRequest();
     xhr.timeout = 25000;
     xhr.open("POST", aiCfg.url, true);
     xhr.setRequestHeader("Content-Type", "application/json");
@@ -3703,19 +3775,19 @@ function initAIChat() {
     xhr.onreadystatechange = function() {
       if (xhr.readyState === 4) {
         busy = false;
-        var loadings = aiMsgs.querySelectorAll(".msg-loading");
-        for (var i = 0; i < loadings.length; i++) loadings[i].remove();
+        let loadings = aiMsgs.querySelectorAll(".msg-loading");
+        for (let i = 0; i < loadings.length; i++) loadings[i].remove();
         if (xhr.status >= 200 && xhr.status < 300) {
           try {
-            var resp = JSON.parse(xhr.responseText);
+            let resp = JSON.parse(xhr.responseText);
             // 使用配置的响应路径解析回复
-            var reply = getPath(resp, aiCfg.responsePath) || "AI 没有返回内容。";
+            let reply = getPath(resp, aiCfg.responsePath) || "AI 没有返回内容。";
             appendMsg(escapeHtml(reply).replace(/\n/g, "<br>"), "msg-bot");
           } catch (e) {
             appendMsg("解析响应出错，请稍后重试。", "msg-bot");
           }
         } else {
-          var errMsg = "请求失败（" + xhr.status + "）";
+          let errMsg = "请求失败（" + xhr.status + "）";
           if (xhr.status === 401) errMsg = "API Key 无效，请检查设置。";
           else if (xhr.status === 429) errMsg = "请求太频繁，请稍后再试。";
           else if (xhr.status === 0) errMsg = "网络连接失败，请检查网络。";
@@ -3725,20 +3797,20 @@ function initAIChat() {
     };
     xhr.onerror = function() {
       busy = false;
-      var loadings = aiMsgs.querySelectorAll(".msg-loading");
-      for (var i = 0; i < loadings.length; i++) loadings[i].remove();
+      let loadings = aiMsgs.querySelectorAll(".msg-loading");
+      for (let i = 0; i < loadings.length; i++) loadings[i].remove();
       appendMsg("网络请求失败，请检查网络后重试。", "msg-bot");
     };
     xhr.ontimeout = function() {
       busy = false;
-      var loadings = aiMsgs.querySelectorAll(".msg-loading");
-      for (var i = 0; i < loadings.length; i++) loadings[i].remove();
+      let loadings = aiMsgs.querySelectorAll(".msg-loading");
+      for (let i = 0; i < loadings.length; i++) loadings[i].remove();
       appendMsg("请求超时，请稍后再试。", "msg-bot");
     };
     try { xhr.send(JSON.stringify(payload)); } catch (e) {
       busy = false;
-      var loadings = aiMsgs.querySelectorAll(".msg-loading");
-      for (var i = 0; i < loadings.length; i++) loadings[i].remove();
+      let loadings = aiMsgs.querySelectorAll(".msg-loading");
+      for (let i = 0; i < loadings.length; i++) loadings[i].remove();
       appendMsg("发送请求出错：" + e.message, "msg-bot");
     }
   }
@@ -3804,7 +3876,7 @@ function initAIChat() {
         return res.data;
       }
     } catch (e) {
-      console.error("checkBind error:", e);
+      Logger.error("checkBind error:", e);
     }
     return null;
   }
@@ -3833,7 +3905,7 @@ function initAIChat() {
       });
       return await res.json();
     } catch (e) {
-      console.error("cloudCall HTTP error:", e);
+      Logger.error("cloudCall HTTP error:", e);
       throw e;
     }
   }
@@ -3843,7 +3915,7 @@ function initAIChat() {
     if (!cloudSyncState.isLoggedIn || !cloudSyncState.openid) return;
     // v107修复：设置未真实变更时不上传——此前每次同步都推进 updatedAt，
     // 云端 >= 比较导致小程序端的设置修改永远被 APK 覆盖
-    if (!_settingsDirty) { console.log("Settings unchanged, skip upload"); return; }
+    if (!_settingsDirty) { Logger.debug("Settings unchanged, skip upload"); return; }
 
     try {
       const settings = {
@@ -3875,10 +3947,10 @@ function initAIChat() {
 
       if (res.code === 0) {
         _settingsDirty = false;
-        console.log("Settings synced to cloud");
+        Logger.debug("Settings synced to cloud");
       }
     } catch (e) {
-      console.error("syncSettingsToCloud error:", e);
+      Logger.error("syncSettingsToCloud error:", e);
     }
   }
 
@@ -3921,10 +3993,10 @@ function initAIChat() {
         saveDB();
         cloudSyncState.lastSync = now;
         localStorage.setItem("cloud_last_sync", cloudSyncState.lastSync);
-        console.log(`Synced ${pendingRecords.length} records to cloud`);
+        Logger.debug(`Synced ${pendingRecords.length} records to cloud`);
       }
     } catch (e) {
-      console.error("syncRecordsToCloud error:", e);
+      Logger.error("syncRecordsToCloud error:", e);
     }
   }
 
@@ -3966,7 +4038,7 @@ function initAIChat() {
           _lastSettingsFp = settingsFingerprint(); _settingsDirty = false;
           saveDB();
           renderAll();
-          console.log("Settings updated from cloud");
+          Logger.debug("Settings updated from cloud");
         }
 
         // 合并记录（v107修复：合并键 id 优先、dateKey_type_time 兜底——
@@ -3997,7 +4069,7 @@ function initAIChat() {
             DB.records.sort((a, b) => b.time - a.time);
             saveDB();
             renderAll();
-            console.log("Downloaded records merged from cloud");
+            Logger.debug("Downloaded records merged from cloud");
           }
         }
 
@@ -4005,14 +4077,14 @@ function initAIChat() {
         localStorage.setItem("cloud_last_sync", cloudSyncState.lastSync);
       }
     } catch (e) {
-      console.error("syncFromCloud error:", e);
+      Logger.error("syncFromCloud error:", e);
     }
   }
 
   // 双向同步（上传本地 + 下载云端）
   async function bidirectionalSync() {
     if (!cloudSyncState.isLoggedIn) {
-      console.log("Not logged in, skip sync");
+      Logger.debug("Not logged in, skip sync");
       return;
     }
     
@@ -4028,7 +4100,7 @@ function initAIChat() {
       
       toast("数据同步完成", "ok");
     } catch (e) {
-      console.error("bidirectionalSync error:", e);
+      Logger.error("bidirectionalSync error:", e);
       toast("同步失败，请检查网络", "warn");
     }
   }
@@ -4042,7 +4114,7 @@ function initAIChat() {
     bidirectionalSync();
     // 每30分钟同步
     cloudSyncState.syncInterval = setInterval(bidirectionalSync, 30 * 60 * 1000);
-    console.log("Auto sync started, interval=30min");
+    Logger.debug("Auto sync started, interval=30min");
   }
 
   // 停止自动同步
@@ -4058,10 +4130,10 @@ function initAIChat() {
     // 如果有openid，尝试恢复登录状态
     if (cloudSyncState.openid) {
       cloudSyncState.isLoggedIn = true;
-      console.log("Cloud sync restored, openid:", cloudSyncState.openid);
+      Logger.debug("Cloud sync restored, openid:", cloudSyncState.openid);
       startAutoSync();
     } else {
-      console.log("Cloud sync not bound, waiting for bind");
+      Logger.debug("Cloud sync not bound, waiting for bind");
     }
   }
 
