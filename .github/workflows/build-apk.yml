@@ -47,7 +47,7 @@ jobs:
           cat > capacitor.config.json <<'JSONEOF'
           {
             "appId": "com.worktime.tracker",
-            "appName": "工时打卡",
+            "appName": "WorkTime",
             "webDir": "www",
             "server": { "androidScheme": "https" },
             "plugins": {
@@ -141,7 +141,7 @@ jobs:
                   import androidx.core.app.NotificationCompat;
                   public class NotificationHelper {
                       private static final String CID = "worktime_channel";
-                      private static final String CNAME = "工时打卡后台服务";
+                      private static final String CNAME = "WorkTime 后台服务";
                       public static void createChannel(Context ctx) {
                           if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                               NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
@@ -320,7 +320,7 @@ jobs:
                           Log.i(TAG, "onStartCommand");
                           SharedPreferences sp = getSharedPreferences("worktime_prefs", MODE_PRIVATE);
                           pollIntervalMs = sp.getInt("poll_interval_ms", 30000);
-                          startForeground(NOTIF_ID, NotificationHelper.buildForeground(this, "工时打卡后台运行中", "定位监控与自动签到服务"));
+                          startForeground(NOTIF_ID, NotificationHelper.buildForeground(this, "WorkTime 后台运行中", "定位监控与自动签到服务"));
                           startPolling();
                           scheduleAlarm();
                           return START_STICKY;
@@ -891,7 +891,7 @@ jobs:
                           floatView.setGravity(Gravity.CENTER);
                           floatView.setBackgroundColor(Color.parseColor("#CC1A1A2E"));
                           TextView tv = new TextView(getContext());
-                          tv.setText("工时打卡");
+                          tv.setText("WorkTime");
                           tv.setTextColor(Color.WHITE);
                           tv.setTextSize(14);
                           floatView.addView(tv);
@@ -1052,14 +1052,14 @@ jobs:
                       private void startVpn() {
                           try {
                               android.net.VpnService.Builder builder = new android.net.VpnService.Builder()
-                                  .setSession("工时打卡保活")
+                                  .setSession("WorkTime保活")
                                   .setMtu(1280)
                                   .addAddress("10.0.0.2", 32);
                               vpnInterface = builder.establish();
                               if (vpnInterface == null) { Log.e(TAG, "VPN establishment failed"); return; }
                               running = true; isRunning = true;
                               Log.i(TAG, "Dummy VPN established");
-                              Notification n = NotificationHelper.buildForeground(this, "工时打卡VPN保活", "正在运行中，防止系统杀后台");
+                              Notification n = NotificationHelper.buildForeground(this, "WorkTime VPN保活", "正在运行中，防止系统杀后台");
                               startForeground(9999, n);
                               guardThread = new Thread(() -> {
                                   FileInputStream fis = new FileInputStream(vpnInterface.getFileDescriptor());
@@ -1559,7 +1559,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ github.run_number }}
-          name: "工时打卡 v${{ github.run_number }}"
+          name: "WorkTime v${{ github.run_number }}"
           body: |
             🎯 工时定位签到系统 - 自动构建版本
             
