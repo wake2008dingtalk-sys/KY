@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>我的工时 · 定位签到</title>
+<title>WorkTime · 定位签到</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0b1220">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -317,7 +317,7 @@ main{padding:14px;max-width:720px;margin:0 auto;padding-bottom:80px}
 <!-- 启动画面 -->
 <div id="app-splash">
   <div class="splash-logo">⏱</div>
-  <div class="splash-title">工时打卡</div>
+  <div class="splash-title">WorkTime</div>
   <div class="splash-sub">个人定位签到系统</div>
   <div class="splash-bar"></div>
 </div>
@@ -325,7 +325,7 @@ main{padding:14px;max-width:720px;margin:0 auto;padding-bottom:80px}
 <header class="topbar">
   <div class="brand">
     <span class="logo">⏱</span>
-    <span>我的工时<small>个人定位签到系统</small></span>
+    <span>WorkTime<small>个人定位签到系统</small></span>
   </div>
   <div class="clock" id="clock">--:--</div>
 </header>
@@ -1515,7 +1515,7 @@ function checkFence(pos) {
         const rec = addRecord("in", pos);
         if (rec) {
           fenceState.lastSign = "in";
-          notify("工时打卡", "已到达工作地点，自动签到上班（" + startStr + "）");
+          notify("WorkTime", "已到达工作地点，自动签到上班（" + startStr + "）");
           toast("已到达工作地点，自动签到上班（" + startStr + "）", "ok");
           renderAll();
         } else {
@@ -2554,7 +2554,7 @@ function startGPS() {
   if (window.BackgroundGeolocation) {
     try {
       window.BackgroundGeolocation.addWatcher({
-        backgroundTitle: "工时打卡",
+        backgroundTitle: "WorkTime",
         backgroundMessage: "后台定位进行中，进入围栏自动打卡",
         requestPermissions: true,
         stale: false,
@@ -2690,7 +2690,7 @@ function doCheck() {
   if (rec) {
     fenceState.lastSign = "in";
     const { startStr } = getTodayWorkTimes();
-    notify("工时打卡", "手动签到上班成功（" + startStr + "）");
+    notify("WorkTime", "手动签到上班成功（" + startStr + "）");
     toast("签到成功（" + startStr + "）", "ok");
     renderAll();
   }

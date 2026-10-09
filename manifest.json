@@ -1,7 +1,7 @@
 {
-    "name": "\u5de5\u65f6\u6253\u5361",
-    "short_name": "\u5de5\u65f6\u6253\u5361",
-    "description": "\u4e2a\u4eba\u5de5\u65f6\u5b9a\u4f4d\u7b7e\u5230\u7cfb\u7edf",
+    "name": "WorkTime",
+    "short_name": "WorkTime",
+    "description": "个人工时定位签到系统",
     "id": "my-attendance-tracker",
     "start_url": "/",
     "display": "standalone",
