@@ -340,7 +340,6 @@ main{padding:14px;max-width:720px;margin:0 auto;padding-bottom:80px}
       <button class="map-layer-btn active" id="btn-layer-normal" title="标准地图">🗺</button>
       <button class="map-layer-btn" id="btn-layer-sat" title="卫星地图">🛰</button>
       <button class="map-layer-btn" id="btn-layer-hybrid" title="混合地图(卫星+路网)">🧭</button>
-      <button class="map-layer-btn" id="btn-layer-3d" title="3D地图">🏢</button>
       <button class="map-layer-btn toggle" id="btn-layer-traffic" title="交通路况(可叠加任意底图)">🚦</button>
       <button class="map-btn" id="map-zoom-in" title="放大">＋</button>
       <button class="map-btn" id="map-zoom-out" title="缩小">－</button>
@@ -1717,39 +1716,23 @@ function onBMapLoaded() {
     bmap.addEventListener("zoomend", function() {
       mapZoom = bmap.getZoom();
     });
-    // 图层切换：底图四选一（标准/卫星/混合/3D）+ 交通路况独立叠加开关
+    // 图层切换：底图三选一（标准/卫星/混合）+ 交通路况独立叠加开关
     var trafficLayer = null;
     var baseLayers = [
       { id: "btn-layer-normal", type: BMAP_NORMAL_MAP },
       { id: "btn-layer-sat", type: BMAP_SATELLITE_MAP },
-      { id: "btn-layer-hybrid", type: BMAP_HYBRID_MAP },
-      { id: "btn-layer-3d", type: BMAP_PERSPECTIVE_MAP }
+      { id: "btn-layer-hybrid", type: BMAP_HYBRID_MAP }
     ];
     function setBaseLayer(clickId) {
       baseLayers.forEach(function(item) {
         var btn = document.getElementById(item.id);
         if (item.id === clickId) {
-          // 3D地图：自动调整缩放级别并提示
-          if (item.type === BMAP_PERSPECTIVE_MAP) {
-            var currentZoom = bmap.getZoom();
-            if (currentZoom < 15) {
-              bmap.setZoom(16);
-              toast("3D 视图已启动，缩放级别已自动调整", "ok");
-            }
-          }
           bmap.setMapType(item.type);
           btn.classList.add("active");
         } else {
           btn.classList.remove("active");
         }
       });
-      // 3D模式下交通路况不兼容，自动关闭并提示
-      if (clickId === "btn-layer-3d" && trafficLayer) {
-        bmap.removeTileLayer(trafficLayer);
-        trafficLayer = null;
-        document.getElementById("btn-layer-traffic").classList.remove("active");
-        toast("3D 模式下交通路况暂不支持，已自动关闭");
-      }
     }
     baseLayers.forEach(function(item) {
       var btn = document.getElementById(item.id);
@@ -1757,13 +1740,13 @@ function onBMapLoaded() {
         btn.addEventListener("click", function() {
           const isNativeApp = !!(window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.BaiduMap);
           if (isNativeApp) {
-            window.Capacitor.Plugins.BaiduMap.setMapType({ type: item.type === BMAP_SATELLITE_MAP ? "satellite" : item.type === BMAP_PERSPECTIVE_MAP ? "3d" : "normal" })
+            window.Capacitor.Plugins.BaiduMap.setMapType({ type: item.type === BMAP_SATELLITE_MAP ? "satellite" : "normal" })
               .then(() => {
                 btn.classList.add("active");
                 baseLayers.forEach(function(other) {
                   if (other.id !== item.id) document.getElementById(other.id).classList.remove("active");
                 });
-                toast(item.id === "btn-layer-3d" ? "3D 视图已启动" : item.id === "btn-layer-sat" ? "卫星地图已开启" : "标准地图已开启", "ok");
+                toast(item.id === "btn-layer-sat" ? "卫星地图已开启" : "标准地图已开启", "ok");
               })
               .catch(e => { toast("切换地图失败：" + e.message, "warn"); });
             return;
