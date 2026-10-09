@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WorkTime 隐私政策</title>
+<style>
+  body { font-family: -apple-system, "PingFang SC", "Noto Serif CJK SC", "Microsoft YaHei", sans-serif; max-width: 760px; margin: 0 auto; padding: 24px 20px 60px; color: #222; line-height: 1.85; background: #fff; }
+  h1 { font-size: 22px; border-bottom: 2px solid #1a1a2e; padding-bottom: 10px; }
+  h2 { font-size: 17px; margin-top: 32px; color: #1a1a2e; }
+  h3 { font-size: 15px; margin-top: 20px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; margin: 12px 0; }
+  th, td { border: 1px solid #ccc; padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: #f4f4f8; }
+  .meta { color: #666; font-size: 13px; }
+  .hl { background: #fff8e6; padding: 10px 14px; border-left: 4px solid #f0a020; margin: 14px 0; font-size: 14px; }
+  ul { padding-left: 22px; }
+</style>
+</head>
+<body>
+<h1>WorkTime 隐私政策</h1>
+<p class="meta">更新日期：2026年10月9日 &nbsp;·&nbsp; 生效日期：2026年10月9日 &nbsp;·&nbsp; 适用应用：WorkTime（Android，包名 com.worktime.tracker）</p>
+
+<div class="hl">
+<strong>一句话说明：</strong>WorkTime 是一款<strong>数据存储在您本人设备上</strong>的个人工时记录工具。
+开发者不运营任何收集您数据的服务器，<strong>不收集、不上传、不分享</strong>您的任何个人信息。
+您自主配置的云端同步、AI 助手等功能的对接方均由您自行选择与配置。
+</div>
+
+<h2>一、我们处理的权限及用途</h2>
+<p>为实现「到达工作地点自动签到」等核心功能，应用会申请以下系统权限，<strong>全部仅用于下表所列用途</strong>：</p>
+<table>
+<tr><th>权限</th><th>用途</th><th>是否可关闭</th></tr>
+<tr><td>精确位置（前台）</td><td>在地图上显示您的位置、设置与校准工作地点</td><td>可关闭（关闭后地图定位不可用）</td></tr>
+<tr><td>后台位置</td><td>应用退至后台后持续检测是否进入工作地点围栏，以触发自动签到</td><td>可关闭（关闭后自动签到失效，手动打卡不受影响）</td></tr>
+<tr><td>通知</td><td>签到成功/异常提醒、后台服务常驻通知</td><td>可关闭</td></tr>
+<tr><td>前台服务（位置类型）</td><td>保持后台定位监控服务运行，防止被系统回收</td><td>系统强制显示常驻通知，可停止服务</td></tr>
+<tr><td>悬浮窗</td><td>可选的保活提示小窗</td><td>可关闭，默认不开启</td></tr>
+<tr><td>精确闹钟</td><td>班前签到提醒的准时触发</td><td>可关闭</td></tr>
+<tr><td>开机自启动</td><td>设备重启后自动恢复定位监控服务</td><td>可在系统设置中关闭</td></tr>
+<tr><td>忽略电池优化</td><td>申请系统不限制本应用的后台运行（保活）</td><td>可拒绝，拒绝后自动签到可靠性下降</td></tr>
+<tr><td>网络访问</td><td>加载地图数据、您自主配置的云端同步与 AI 助手</td><td>—</td></tr>
+</table>
+
+<h2>二、信息的存储与去向</h2>
+<h3>2.1 本地存储</h3>
+<p>打卡记录、工作地点、班次设置、主题偏好等<strong>全部数据默认仅保存在您的设备本地</strong>（浏览器存储与应用私有目录），卸载应用即删除。</p>
+<h3>2.2 云端同步（可选，您自主配置）</h3>
+<p>如您开启云端同步，数据将发送至<strong>您自行配置的云服务地址</strong>。该服务由您选择和管理，开发者无法访问其中的任何数据。</p>
+<h3>2.3 AI 助手（可选，您自主配置）</h3>
+<p>AI 助手功能需要您自行填写第三方大模型服务的 API 地址与密钥。您发送的对话内容及必要的考勤上下文（如当日工时数字）将直接发送至<strong>您配置的服务商</strong>，其数据处理以该服务商的隐私政策为准。不配置则此功能不启用、不传输任何数据。</p>
+<h3>2.4 第三方服务</h3>
+<table>
+<tr><th>服务方</th><th>用途</th><th>涉及数据</th></tr>
+<tr><td>百度地图开放平台</td><td>地图显示、地点检索、坐标转换</td><td>地图加载时的设备网络信息、您检索的地名关键词、您选点的坐标</td></tr>
+</table>
+<p>百度地图相关数据处理见其官方隐私政策（lbsyun.baidu.com）。</p>
+
+<h2>三、我们不做的事</h2>
+<ul>
+<li>不注册账号、不要求登录，无用户体系；</li>
+<li>不接入任何广告、统计、埋点 SDK；</li>
+<li>不读取通讯录、短信、通话记录、相册、麦克风、摄像头；</li>
+<li>不把您的任何数据发送至开发者控制的服务器（开发者没有此类服务器）。</li>
+</ul>
+
+<h2>四、您的权利</h2>
+<ul>
+<li><strong>查看/导出</strong>：应用内「统计」与「记录」页可查看全部打卡数据，支持导出；</li>
+<li><strong>更正/删除</strong>：记录页可逐条修正或删除打卡记录；设置中可清空全部数据；</li>
+<li><strong>撤回授权</strong>：可随时在系统「设置→应用→WorkTime→权限」中关闭任一权限；</li>
+<li><strong>注销</strong>：本应用无账号体系，卸载应用并删除本地数据即完成全部信息清除。</li>
+</ul>
+
+<h2>五、未成年人保护</h2>
+<p>本应用为效率工具，不面向 14 周岁以下儿童提供服务。如您为未成年人，请在监护人指导下使用。</p>
+
+<h2>六、政策更新与联系我们</h2>
+<p>本政策更新时将在本页面发布新版本并标注更新日期。如对本政策有任何疑问，可通过应用内「设置→关于」中提供的方式与我们联系。</p>
+
+<p class="meta">本政策依据《中华人民共和国个人信息保护法》《中华人民共和国网络安全法》及《App违法违规收集使用个人信息行为认定方法》等规定制定。</p>
+</body>
+</html>
