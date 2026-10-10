@@ -9,6 +9,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="apple-touch-icon" href="app-icon/icon-192.png">
+<!-- v110: CloudBase Web SDK（APK 端匿名登录调云函数） -->
+<script src="cloudbase-sdk.min.js"></script>
 <style>
 :root{
   --bg:#0b1220; --bg2:#0f1a2e; --panel:#121e33; --panel2:#0d1626;
@@ -3893,7 +3895,23 @@ function initAIChat() {
     return null;
   }
 
-  // 通用云函数调用（HTTP 方式）
+  // v110：CloudBase Web SDK 初始化（匿名登录，替代原 HTTP 触发方案）
+  let _cbApp = null;
+  let _cbReady = null;
+  function _ensureCloudbase() {
+    if (!_cbApp && window.cloudbase) {
+      _cbApp = window.cloudbase.init({ env: CLOUD_ENV });
+      const auth = _cbApp.auth({ persistence: "local" });
+      _cbReady = auth.signInAnonymously().catch(e => {
+        Logger.error("cloudbase anonymous sign-in failed:", e);
+        _cbApp = null; _cbReady = null;
+        throw e;
+      });
+    }
+    return _cbReady;
+  }
+
+  // 通用云函数调用
   async function cloudCall(functionName, data) {
     // 方式1：如果已集成微信JSSDK
     if (window.wx && window.wx.cloud) {
@@ -3906,20 +3924,12 @@ function initAIChat() {
         });
       });
     }
-    
-    // 方式2：HTTP 直接调用云函数（需要云函数开启HTTP触发）
-    const url = `https://${CLOUD_ENV}.service.tcloudbase.com/${functionName}`;
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
-      });
-      return await res.json();
-    } catch (e) {
-      Logger.error("cloudCall HTTP error:", e);
-      throw e;
-    }
+
+    // 方式2：CloudBase Web SDK（匿名登录 + callFunction）
+    await _ensureCloudbase();
+    if (!_cbApp) throw new Error("CloudBase SDK 未加载");
+    const res = await _cbApp.callFunction({ name: functionName, data: data });
+    return res.result;
   }
 
   // 同步设置到云端
