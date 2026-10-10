@@ -3818,7 +3818,7 @@ function initAIChat() {
   // v107修复：escapeHtml 重复定义已删除，统一使用全局版本（含引号转义）
 
   /* ===================== 云同步模块 ===================== */
-  const CLOUD_ENV = "worktime-d2glqyf6lf1bfe67b"; // 微信云开发环境ID
+  const CLOUD_ENV = "cloudbase-d6gju7uved0ea9d0a"; // 微信云开发环境ID（v110: 换成小程序实际绑定的环境）
   let cloudSyncState = {
     isLoggedIn: false,
     openid: localStorage.getItem("cloud_openid") || "",
@@ -3841,6 +3841,18 @@ function initAIChat() {
 
   // 微信扫码登录：生成二维码让小程序扫描绑定
   function generateBindQR() {
+    // v110修复：15 分钟内复用已有绑定码，避免每次打开弹窗换码导致小程序输入失效
+    const existing = localStorage.getItem("pending_bind_code");
+    if (existing) {
+      try {
+        const prev = JSON.parse(existing);
+        if (prev.bindCode && Date.now() - (prev.createdAt || 0) < 15 * 60 * 1000) {
+          return prev.bindCode;
+        }
+      } catch (e) {
+        Logger.warn("pending_bind_code parse error:", e);
+      }
+    }
     const bindCode = "BIND_" + Date.now() + "_" + Math.random().toString(36).substr(2, 6).toUpperCase();
     const bindData = {
       deviceId: cloudSyncState.deviceId,
